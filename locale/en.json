@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Plugin Updater",
+    "description": "Checks installed plugins for newer versions and updates them with one click."
+  }
+}
