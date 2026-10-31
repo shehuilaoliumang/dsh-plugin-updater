@@ -4,12 +4,13 @@
 
 在 DeepSeek Harness 的 **插件（Plugins）** 页里检查已安装插件是否有新版本，并对可更新的插件提供一键更新。
 
-入口分两处，各司其职：
+入口分三处，各司其职：
 
-- **插件 → 更新检查**（`plugins.tab`）：总览页。列出全部已安装插件，一眼看到哪些能更新、哪些已是最新；支持搜索、按状态筛选、逐条更新与批量更新。
+- **侧栏 → 更新检查**（`sidebar.panellist` 图标 + 同名 `main` 面板）：日常入口。图标与插件页图标同排，有可更新插件时右上角带提示点；点开就是完整的检查面板与自动更新设置。
+- **插件 → 更新检查**（`plugins.tab`）：插件页内的总览标签页，内容与侧栏面板一致（复用同一组件），支持搜索、按状态筛选、逐条更新与批量更新。
 - **插件详情页**（`plugins.detail.badge` + `plugins.detail.actions`）：就地更新。标题旁出现「可更新 1.2.3」标签，页头出现「更新到 1.2.3」按钮，与内置插件管理器给官方插件提供 Update 的位置一致。
 
-发现性问题由右下角的限时提醒补足：启动后若检测到可更新插件，会弹出一个 5 秒后自动消失、也可手动关闭的提醒卡，可直接「全部更新」或跳到插件页；同一批可更新插件在同一浏览器会话内只提醒一次。设置页、侧栏不新增入口——安装/维护插件属于插件页的职责。
+发现性问题由右下角的限时提醒补足：启动后若检测到可更新插件，会弹出一个 5 秒后自动消失、也可手动关闭的提醒卡，可直接「全部更新」或跳到插件页；同一批可更新插件在同一浏览器会话内只提醒一次。设置页不新增入口——自动更新设置就在本插件的总览与侧栏面板里。
 
 ## 功能
 
@@ -41,7 +42,7 @@
   - `GET|POST /dsh-plugin-updater/api/settings`：读取/合并保存自动更新设置（`autoUpdate.pageOpen`、`autoUpdate.scheduled.{enabled,intervalMinutes}` 与忽略表 `ignored`），设置写入 `~/.dsh/plugin-updater/settings.json`，与 profile 配置隔离。
   - `POST /dsh-plugin-updater/api/update-batch`：body `{ "names": ["..."] }`（省略则用当前全部可更新项），顺序更新并汇总成功/失败。
   - registry 优先级：`pluginManager.registries()` 的 resolved / registry / fallbackRegistries → `pluginRegistryProbe.fastest()` → `https://registry.npmjs.org/`。
-- Client 半（`client.js`）：注册 `plugins.tab` 槽位（order 10）渲染总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject` 渲染当前插件的更新标签与按钮，对没有可更新内容的 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存；文案走 Client locale（zh/en）；样式只使用 `--dsw-alias-*` 主题 token。
+- Client 半（`client.js`）：注册 `sidebar.panellist`（`id: dsh-plugin-updater`，order 2）提供侧栏图标（有可更新插件时带提示点），并注册同名 `main` 面板（`key: dsh-plugin-updater`）承载完整检查面板；注册 `plugins.tab` 槽位（order 10）渲染同一份总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject` 渲染当前插件的更新标签与按钮，对没有可更新内容的 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存；文案走 Client locale（zh/en）；样式只使用 `--dsw-alias-*` 主题 token。
 
 ## 安装
 

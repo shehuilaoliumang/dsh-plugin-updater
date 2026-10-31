@@ -131,6 +131,7 @@ window.__ModuleLoader__.load({
       colLatest: '最新版本',
       colStatus: '状态',
       colAction: '操作',
+      navLabel: '更新检查',
       settingsTitle: '自动更新',
       settingsIntro: '自动更新只处理 npm 安装的第三方插件；官方自带、本地链接、Git、压缩包来源的插件会被跳过，失败会自动回滚旧版本。',
       settingsPageOpen: '打开页面时自动更新',
@@ -280,6 +281,7 @@ window.__ModuleLoader__.load({
       colLatest: 'Latest',
       colStatus: 'Status',
       colAction: 'Action',
+      navLabel: 'Update check',
       settingsTitle: 'Automatic updates',
       settingsIntro: 'Automatic updates only handle npm-installed third-party plugins; DSH-shipped, local, Git and tarball plugins are skipped, and a failed install restores the old version.',
       settingsPageOpen: 'Update when a page opens',
@@ -402,6 +404,8 @@ window.__ModuleLoader__.load({
 .dpu-popup-bar { height: 3px; border-radius: 2px; background: var(--dsw-alias-bg-layer-2); overflow: hidden; }
 .dpu-popup-bar-fill { height: 100%; background: var(--dsw-alias-brand-primary); transition: width 200ms linear; }
 .dpu-popup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.dpu-panel { display: flex; flex-direction: column; height: 100%; overflow-y: auto; box-sizing: border-box; padding: 16px 20px 24px; }
+.dpu-nav-icon { display: inline-flex; align-items: center; justify-content: center; color: inherit; }
 `
 
     // ---------------------------------------------------------------------
@@ -1147,6 +1151,96 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------------------------------------------------------------
+    // Sidebar entry + dedicated main panel
+    // ---------------------------------------------------------------------
+
+    function createNavIcon(t) {
+      return function PluginUpdaterNavIcon(props) {
+        const size = props !== null && typeof props === 'object' && typeof props.size === 'number' ? props.size : 16
+        const active = props !== null && typeof props === 'object' && props.active === true
+        const [count, setCount] = React.useState(0)
+
+        React.useEffect(() => {
+          let alive = true
+          loadState(false)
+            .then((state) => {
+              if (!alive) return
+              setCount(updatableNamesOf(state).length)
+            })
+            .catch(() => {})
+          return () => {
+            alive = false
+          }
+        }, [])
+
+        const stroke = active ? 'var(--dsw-alias-brand-primary)' : 'currentColor'
+        const children = [
+          h('path', {
+            key: 'top',
+            d: 'M2.5 8a5.5 5.5 0 0 1 9.4-3.85',
+            fill: 'none',
+            stroke,
+            strokeWidth: 1.5,
+            strokeLinecap: 'round',
+          }),
+          h('path', {
+            key: 'top-head',
+            d: 'M12.2 1.9v3.4H8.8',
+            fill: 'none',
+            stroke,
+            strokeWidth: 1.5,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+          }),
+          h('path', {
+            key: 'bottom',
+            d: 'M13.5 8a5.5 5.5 0 0 1-9.4 3.85',
+            fill: 'none',
+            stroke,
+            strokeWidth: 1.5,
+            strokeLinecap: 'round',
+          }),
+          h('path', {
+            key: 'bottom-head',
+            d: 'M3.8 14.1v-3.4h3.4',
+            fill: 'none',
+            stroke,
+            strokeWidth: 1.5,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+          }),
+        ]
+        if (count > 0) {
+          children.push(h('circle', {
+            key: 'dot',
+            cx: 13.6,
+            cy: 2.4,
+            r: 2.1,
+            fill: 'var(--dsw-alias-state-warn-primary)',
+            stroke: 'var(--dsw-alias-bg-base)',
+            strokeWidth: 1,
+          }))
+        }
+        return h('svg', {
+          className: 'dpu-nav-icon',
+          width: size,
+          height: size,
+          viewBox: '0 0 16 16',
+          role: 'img',
+          'aria-label': t('navLabel'),
+          focusable: 'false',
+        }, children)
+      }
+    }
+
+    function createPanel(t) {
+      const inner = createTab(t)
+      return function PluginUpdaterPanel() {
+        return h('div', { className: 'dpu-panel' }, h(inner, null))
+      }
+    }
+
+    // ---------------------------------------------------------------------
     // Update check tab
     // ---------------------------------------------------------------------
 
@@ -1820,6 +1914,18 @@ window.__ModuleLoader__.load({
         label: () => t('tab'),
         locale: NS,
       }, createTab(t)))
+
+      ctx.slots.inject('main', () => ctx.slots.register({
+        name: 'main',
+        key: 'dsh-plugin-updater',
+      }, createPanel(t)))
+
+      ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+        name: 'sidebar.panellist',
+        id: 'dsh-plugin-updater',
+        order: 2,
+        label: () => t('navLabel'),
+      }, createNavIcon(t)))
 
       ctx.slots.inject('plugins.detail.badge', () => ctx.slots.register({
         name: 'plugins.detail.badge',
