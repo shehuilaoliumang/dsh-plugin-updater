@@ -12,11 +12,24 @@
  * service. Nothing here is exposed outside the local web server.
  */
 
-const VERSION = '0.3.0'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+
+const VERSION = '0.4.0'
 
 const STATE_PATH = '/dsh-plugin-updater/api/state'
 const UPDATE_PATH = '/dsh-plugin-updater/api/update'
 const PROGRESS_PATH = '/dsh-plugin-updater/api/progress'
+const SETTINGS_PATH = '/dsh-plugin-updater/api/settings'
+const BATCH_PATH = '/dsh-plugin-updater/api/update-batch'
+
+const MIN_INTERVAL_MINUTES = 30
+const MAX_INTERVAL_MINUTES = 30 * 24 * 60
+const DEFAULT_INTERVAL_MINUTES = 6 * 60
+const ENABLE_RUN_DELAY_MS = 1500
+const DSH_HOME = process.env.DSH_HOME !== undefined && process.env.DSH_HOME !== '' ? process.env.DSH_HOME : join(homedir(), '.dsh')
+const SETTINGS_FILE = join(DSH_HOME, 'plugin-updater', 'settings.json')
 
 const PACKUMENT_TTL_MS = 5 * 60 * 1000
 const FAILURE_TTL_MS = 45 * 1000
@@ -319,6 +332,50 @@ function pendingBuildsOf(result) {
 }
 
 // ---------------------------------------------------------------------------
+// Auto-update settings (persisted next to the DSH home directory)
+// ---------------------------------------------------------------------------
+
+function defaultSettings() {
+  return {
+    autoUpdate: { pageOpen: false, scheduled: { enabled: false, intervalMinutes: DEFAULT_INTERVAL_MINUTES } },
+    ignored: {},
+  }
+}
+
+function clampIntervalMinutes(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return DEFAULT_INTERVAL_MINUTES
+  return Math.min(MAX_INTERVAL_MINUTES, Math.max(MIN_INTERVAL_MINUTES, Math.round(number)))
+}
+
+function normalizeIgnored(value) {
+  const result = {}
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return result
+  for (const [name, version] of Object.entries(value)) {
+    if (typeof name !== 'string' || name === '' || name.length > 200) continue
+    if (typeof version !== 'string' || version === '' || version.length > 100) continue
+    result[name] = version
+  }
+  return result
+}
+
+function normalizeSettings(value) {
+  const source = value !== null && typeof value === 'object' ? value : {}
+  const autoUpdate = source.autoUpdate !== null && typeof source.autoUpdate === 'object' ? source.autoUpdate : {}
+  const scheduled = autoUpdate.scheduled !== null && typeof autoUpdate.scheduled === 'object' ? autoUpdate.scheduled : {}
+  return {
+    autoUpdate: {
+      pageOpen: autoUpdate.pageOpen === true,
+      scheduled: {
+        enabled: scheduled.enabled === true,
+        intervalMinutes: clampIntervalMinutes(scheduled.intervalMinutes),
+      },
+    },
+    ignored: normalizeIgnored(source.ignored),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
@@ -333,8 +390,12 @@ export function apply(ctx) {
   // so a long pnpm remove/install stays legible instead of one silent spinner.
   let progress = null
 
-  function beginProgress(name, fromVersion, targetVersion) {
+  function beginProgress(name, fromVersion, targetVersion, meta) {
+    const options = meta !== null && typeof meta === 'object' ? meta : {}
     progress = {
+      kind: typeof options.kind === 'string' ? options.kind : 'single',
+      index: typeof options.index === 'number' ? options.index : 0,
+      total: typeof options.total === 'number' ? options.total : 1,
       name,
       fromVersion: typeof fromVersion === 'string' ? fromVersion : null,
       targetVersion: typeof targetVersion === 'string' ? targetVersion : null,
@@ -352,6 +413,232 @@ export function apply(ctx) {
 
   function clearProgress() {
     progress = null
+  }
+
+  // Persisted auto-update preferences and the background schedule. The browser
+  // half edits these through the settings route; the timer only acts while this
+  // plugin is mounted, i.e. while DSH is running.
+  let settings = defaultSettings()
+  let lastAutoRun = null
+  let nextRunAt = null
+  let backgroundTimer = null
+
+  function isIgnored(name, latestVersion) {
+    if (typeof name !== 'string' || name === '') return false
+    if (typeof latestVersion !== 'string' || latestVersion === '') return false
+    return settings.ignored[name] === latestVersion
+  }
+
+  async function loadSettings() {
+    try {
+      const raw = await readFile(SETTINGS_FILE, 'utf8')
+      settings = normalizeSettings(JSON.parse(raw))
+    } catch {
+      settings = defaultSettings()
+    }
+    return settings
+  }
+
+  async function saveSettings() {
+    await mkdir(dirname(SETTINGS_FILE), { recursive: true })
+    await writeFile(SETTINGS_FILE, `${JSON.stringify(settings, null, 2)}\n`, 'utf8')
+  }
+
+  function computeNextRunAt() {
+    if (!settings.autoUpdate.scheduled.enabled) return null
+    return new Date(Date.now() + settings.autoUpdate.scheduled.intervalMinutes * 60 * 1000).toISOString()
+  }
+
+  function reschedule() {
+    if (backgroundTimer !== null) {
+      clearInterval(backgroundTimer)
+      backgroundTimer = null
+    }
+    if (settings.autoUpdate.scheduled.enabled) {
+      backgroundTimer = setInterval(() => {
+        void runAutoUpdate('scheduled')
+      }, settings.autoUpdate.scheduled.intervalMinutes * 60 * 1000)
+      if (typeof backgroundTimer.unref === 'function') backgroundTimer.unref()
+    }
+    nextRunAt = computeNextRunAt()
+  }
+
+  function updatableNamesOf(state) {
+    const plugins = state !== null && Array.isArray(state.plugins) ? state.plugins : []
+    return plugins
+      .filter((row) => row !== null && typeof row === 'object' && row.status === 'update-available' && !isIgnored(row.name, row.latestVersion))
+      .map((row) => row.name)
+  }
+
+  async function updateMany(names, kind) {
+    const updated = []
+    const failed = []
+    const total = names.length
+    for (let index = 0; index < total; index += 1) {
+      const name = names[index]
+      let result
+      try {
+        result = await runUpdate(name, { kind, index, total })
+      } catch (error) {
+        result = { ok: false, error: 'update-failed', detail: errorMessage(error) }
+      }
+      clearProgress()
+      if (result !== null && result.ok === true) {
+        updated.push({
+          name,
+          fromVersion: result.fromVersion === undefined ? null : result.fromVersion,
+          toVersion: result.toVersion === undefined ? null : result.toVersion,
+          verifiedVersion: result.verifiedVersion === undefined ? null : result.verifiedVersion,
+        })
+      } else {
+        failed.push({
+          name,
+          error: result !== null && typeof result.error === 'string' ? result.error : 'update-failed',
+          detail: result !== null && typeof result.detail === 'string' ? result.detail : null,
+          rolledBack: result !== null && result.rolledBack === true,
+        })
+      }
+    }
+    return { updated, failed }
+  }
+
+  async function runAutoUpdate(kind) {
+    if (updateInFlight) return { ok: false, error: 'busy' }
+    const enabled = kind === 'scheduled' ? settings.autoUpdate.scheduled.enabled : settings.autoUpdate.pageOpen
+    if (!enabled && kind !== 'enable') return { ok: false, error: 'disabled' }
+    updateInFlight = true
+    const record = { kind, startedAt: new Date().toISOString(), finishedAt: null, checked: 0, updated: [], failed: [] }
+    lastAutoRun = record
+    try {
+      const state = await buildState(true)
+      record.checked = state.counts.total
+      const names = updatableNamesOf(state)
+      if (names.length > 0) {
+        const result = await updateMany(names, 'auto')
+        record.updated = result.updated
+        record.failed = result.failed
+        packumentCache.clear()
+      }
+      return { ok: true, kind, checked: record.checked, updated: record.updated, failed: record.failed }
+    } catch (error) {
+      record.error = errorMessage(error)
+      return { ok: false, error: record.error }
+    } finally {
+      record.finishedAt = new Date().toISOString()
+      clearProgress()
+      updateInFlight = false
+      if (kind === 'scheduled') nextRunAt = computeNextRunAt()
+    }
+  }
+
+  async function handleSettings(request, response) {
+    if (!isSameOrigin(request)) {
+      sendJson(response, 403, { ok: false, error: 'untrusted-origin' })
+      return
+    }
+    if (request.method === 'GET') {
+      sendJson(response, 200, { ok: true, version: VERSION, settings, nextRunAt, lastAutoRun })
+      return
+    }
+    if (request.method !== 'POST') {
+      response.writeHead(405, { allow: 'GET, POST' })
+      response.end()
+      return
+    }
+    let body
+    try {
+      body = await readJsonBody(request)
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: 'invalid-body', detail: errorMessage(error) })
+      return
+    }
+    const patch = body !== null && typeof body === 'object' ? body : {}
+    const previousEnabled = settings.autoUpdate.scheduled.enabled
+    const merged = {
+      autoUpdate: {
+        pageOpen: settings.autoUpdate.pageOpen,
+        scheduled: { ...settings.autoUpdate.scheduled },
+      },
+      ignored: { ...settings.ignored },
+    }
+    if (patch.autoUpdate !== null && typeof patch.autoUpdate === 'object') {
+      if (typeof patch.autoUpdate.pageOpen === 'boolean') merged.autoUpdate.pageOpen = patch.autoUpdate.pageOpen
+      const scheduledPatch = patch.autoUpdate.scheduled
+      if (scheduledPatch !== null && typeof scheduledPatch === 'object') {
+        if (typeof scheduledPatch.enabled === 'boolean') merged.autoUpdate.scheduled.enabled = scheduledPatch.enabled
+        if (scheduledPatch.intervalMinutes !== undefined) merged.autoUpdate.scheduled.intervalMinutes = scheduledPatch.intervalMinutes
+      }
+    }
+    if (patch.ignored !== null && typeof patch.ignored === 'object' && !Array.isArray(patch.ignored)) {
+      for (const [name, version] of Object.entries(patch.ignored)) {
+        if (typeof version === 'string' && version !== '') merged.ignored[name] = version
+        else delete merged.ignored[name]
+      }
+    }
+    settings = normalizeSettings(merged)
+    try {
+      await saveSettings()
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: 'settings-unavailable', detail: errorMessage(error) })
+      return
+    }
+    reschedule()
+    if (!previousEnabled && settings.autoUpdate.scheduled.enabled) {
+      const timer = setTimeout(() => {
+        void runAutoUpdate('enable')
+      }, ENABLE_RUN_DELAY_MS)
+      if (typeof timer.unref === 'function') timer.unref()
+    }
+    sendJson(response, 200, { ok: true, version: VERSION, settings, nextRunAt, lastAutoRun })
+  }
+
+  async function handleBatch(request, response) {
+    if (!isSameOrigin(request)) {
+      sendJson(response, 403, { ok: false, error: 'untrusted-origin' })
+      return
+    }
+    if (request.method !== 'POST') {
+      response.writeHead(405, { allow: 'POST' })
+      response.end()
+      return
+    }
+    let body
+    try {
+      body = await readJsonBody(request)
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: 'invalid-body', detail: errorMessage(error) })
+      return
+    }
+    if (updateInFlight) {
+      sendJson(response, 409, { ok: false, error: 'busy', detail: 'another update is already running' })
+      return
+    }
+    let names = null
+    if (body !== null && typeof body === 'object' && Array.isArray(body.names)) {
+      const requested = body.names
+        .filter((value) => typeof value === 'string' && PACKAGE_NAME_RE.test(value.trim()))
+        .map((value) => value.trim())
+      names = [...new Set(requested)]
+    }
+    updateInFlight = true
+    try {
+      if (names === null || names.length === 0) {
+        const state = await buildState(true)
+        names = updatableNamesOf(state)
+      }
+      if (names.length === 0) {
+        sendJson(response, 200, { ok: true, version: VERSION, total: 0, updated: [], failed: [] })
+        return
+      }
+      const result = await updateMany(names, 'batch')
+      packumentCache.clear()
+      sendJson(response, 200, { ok: true, version: VERSION, total: names.length, updated: result.updated, failed: result.failed })
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: 'update-failed', detail: errorMessage(error) })
+    } finally {
+      clearProgress()
+      updateInFlight = false
+    }
   }
 
   async function registryCandidates(force) {
@@ -505,6 +792,9 @@ export function apply(ctx) {
       ok: true,
       version: VERSION,
       checkedAt: new Date().toISOString(),
+      settings,
+      nextRunAt,
+      lastAutoRun,
       registry: preferredRegistry === null ? registries.length > 0 ? registries[0] : null : preferredRegistry,
       registries,
       counts,
@@ -512,7 +802,7 @@ export function apply(ctx) {
     }
   }
 
-  async function runUpdate(packageName) {
+  async function runUpdate(packageName, meta) {
     const bundles = await manager.listBundles()
     const bundle = (Array.isArray(bundles) ? bundles : []).find((entry) => entry !== null && typeof entry === 'object' && entry.name === packageName)
     if (bundle === undefined || bundle === null || bundle.installed !== true) {
@@ -526,7 +816,7 @@ export function apply(ctx) {
       return { ok: false, error: 'unsupported-source', detail: classified.kind }
     }
     const installedVersion = typeof bundle.version === 'string' ? bundle.version : null
-    beginProgress(packageName, installedVersion, null)
+    beginProgress(packageName, installedVersion, null, meta)
     const registries = await registryCandidates(true)
     const packument = await loadPackument(classified.packageName, registries, true)
     if (!packument.ok) {
@@ -686,6 +976,8 @@ export function apply(ctx) {
     disposers.push(ctx.webServer.register({ kind: 'exact', path: STATE_PATH, handler: handleState }))
     disposers.push(ctx.webServer.register({ kind: 'exact', path: UPDATE_PATH, handler: handleUpdate }))
     disposers.push(ctx.webServer.register({ kind: 'exact', path: PROGRESS_PATH, handler: handleProgress }))
+    disposers.push(ctx.webServer.register({ kind: 'exact', path: SETTINGS_PATH, handler: handleSettings }))
+    disposers.push(ctx.webServer.register({ kind: 'exact', path: BATCH_PATH, handler: handleBatch }))
   } catch (error) {
     for (const dispose of disposers) {
       try {
@@ -705,4 +997,17 @@ export function apply(ctx) {
       }
     }
   })
+  void loadSettings()
+    .then(() => {
+      reschedule()
+    })
+    .catch(() => {
+      // Settings are optional; defaults keep the plugin usable.
+    })
+  ctx.effect(() => () => {
+    if (backgroundTimer !== null) {
+      clearInterval(backgroundTimer)
+      backgroundTimer = null
+    }
+  }, 'dsh-plugin-updater: auto-update schedule')
 }

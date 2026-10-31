@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-updater",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Check installed DSH plugins for newer versions and update them with one click.",

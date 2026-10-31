@@ -4,15 +4,18 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
 
-    const VERSION = '0.3.0'
+    const VERSION = '0.4.0'
     const NS = 'dsh-plugin-updater'
     const STATE_URL = '/dsh-plugin-updater/api/state'
     const UPDATE_URL = '/dsh-plugin-updater/api/update'
     const PROGRESS_URL = '/dsh-plugin-updater/api/progress'
+    const SETTINGS_URL = '/dsh-plugin-updater/api/settings'
+    const BATCH_URL = '/dsh-plugin-updater/api/update-batch'
     const IGNORE_KEY = 'dsh-plugin-updater/ignored'
-    const TOAST_KEY = 'dsh-plugin-updater/toast-shown'
+    const POPUP_KEY = 'dsh-plugin-updater/popup-shown'
     const POLL_MS = 1200
     const STALE_AFTER_MS = 5 * 60 * 1000
+    const POPUP_SECONDS = 5
 
     const zh = {
       tab: '更新检查',
@@ -123,6 +126,44 @@ window.__ModuleLoader__.load({
       toastBody: '打开插件页的「更新检查」即可一键更新。',
       toastView: '查看',
       toastDismiss: '稍后',
+      colName: '插件',
+      colCurrent: '当前版本',
+      colLatest: '最新版本',
+      colStatus: '状态',
+      colAction: '操作',
+      settingsTitle: '自动更新',
+      settingsIntro: '自动更新只处理 npm 安装的第三方插件；官方自带、本地链接、Git、压缩包来源的插件会被跳过，失败会自动回滚旧版本。',
+      settingsPageOpen: '打开页面时自动更新',
+      settingsPageOpenHint: '每次打开 DSH 界面时检查一次，并自动更新所有可更新插件。',
+      settingsScheduled: '后台定时自动更新',
+      settingsScheduledHint: 'DSH 运行期间按固定间隔检查并更新，无需打开本页面。',
+      settingsInterval: '检查间隔',
+      settingsUnitMinutes: '分钟',
+      settingsUnitHours: '小时',
+      settingsUnitDays: '天',
+      settingsRange: '可设置 30 分钟 ～ 30 天。',
+      settingsSave: '保存设置',
+      settingsSaving: '保存中…',
+      settingsSaved: '设置已保存。',
+      settingsSaveFailed: '保存失败：{detail}',
+      settingsPersistHint: '设置保存在 DSH 用户目录，重启后仍生效。',
+      settingsNextRun: '下次定时检查：{time}',
+      settingsNextRunNone: '后台定时检查未开启。',
+      settingsLastRun: '上次自动更新：{time}，检查 {checked} 个，更新 {updated} 个，失败 {failed} 个。',
+      settingsLastRunNone: '尚未执行过自动更新。',
+      settingsIgnored: '已忽略 {n} 个版本',
+      settingsInvalidInterval: '间隔需在 30 分钟 ～ 30 天之间。',
+      autoRunWaiting: '自动更新中…',
+      popupTitle: '有 {n} 个插件可更新',
+      popupBody: '可以立即全部更新，或前往插件页逐个查看。',
+      popupUpdateAll: '全部更新（{n}）',
+      popupView: '查看',
+      popupClose: '关闭',
+      popupSeconds: '{n} 秒后自动关闭',
+      popupWorking: '正在更新（{done}/{total}）…',
+      popupDone: '已更新 {n} 个插件',
+      popupPartial: '已更新 {ok} 个，失败 {failed} 个',
+      popupUpdated: '已自动更新 {n} 个插件',
     }
 
     const en = {
@@ -234,6 +275,44 @@ window.__ModuleLoader__.load({
       toastBody: 'Open the “Update check” tab in the Plugins page to update them.',
       toastView: 'View',
       toastDismiss: 'Later',
+      colName: 'Plugin',
+      colCurrent: 'Current',
+      colLatest: 'Latest',
+      colStatus: 'Status',
+      colAction: 'Action',
+      settingsTitle: 'Automatic updates',
+      settingsIntro: 'Automatic updates only handle npm-installed third-party plugins; DSH-shipped, local, Git and tarball plugins are skipped, and a failed install restores the old version.',
+      settingsPageOpen: 'Update when a page opens',
+      settingsPageOpenHint: 'Check once each time the DSH UI opens and update every updatable plugin automatically.',
+      settingsScheduled: 'Scheduled background updates',
+      settingsScheduledHint: 'Check and update on a fixed interval while DSH runs; no need to keep this page open.',
+      settingsInterval: 'Interval',
+      settingsUnitMinutes: 'minutes',
+      settingsUnitHours: 'hours',
+      settingsUnitDays: 'days',
+      settingsRange: 'Between 30 minutes and 30 days.',
+      settingsSave: 'Save settings',
+      settingsSaving: 'Saving…',
+      settingsSaved: 'Settings saved.',
+      settingsSaveFailed: 'Save failed: {detail}',
+      settingsPersistHint: 'Settings live in the DSH user directory and survive restarts.',
+      settingsNextRun: 'Next scheduled check: {time}',
+      settingsNextRunNone: 'Scheduled checks are off.',
+      settingsLastRun: 'Last automatic run: {time}, checked {checked}, updated {updated}, failed {failed}.',
+      settingsLastRunNone: 'No automatic run yet.',
+      settingsIgnored: '{n} versions ignored',
+      settingsInvalidInterval: 'The interval must be between 30 minutes and 30 days.',
+      autoRunWaiting: 'Running automatic update…',
+      popupTitle: '{n} plugin updates available',
+      popupBody: 'Update all of them now, or open the Plugins page to review each one.',
+      popupUpdateAll: 'Update all ({n})',
+      popupView: 'View',
+      popupClose: 'Close',
+      popupSeconds: 'Closes in {n}s',
+      popupWorking: 'Updating ({done}/{total})…',
+      popupDone: 'Updated {n} plugins',
+      popupPartial: 'Updated {ok}, failed {failed}',
+      popupUpdated: 'Updated {n} plugins automatically',
     }
 
     const CSS = `
@@ -302,6 +381,27 @@ window.__ModuleLoader__.load({
 .dpu-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--dsw-alias-border-l2); border-top-color: var(--dsw-alias-brand-primary); animation: dpu-spin 0.8s linear infinite; flex-shrink: 0; }
 .dpu-inline-row { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
 @keyframes dpu-spin { to { transform: rotate(360deg); } }
+.dpu-settings { display: flex; flex-direction: column; gap: 10px; border-radius: 10px; padding: 12px; box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); }
+.dpu-settings-title { font-weight: 600; font-size: 13px; }
+.dpu-settings-intro { color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 16px; }
+.dpu-switch-row { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.dpu-switch-row input { margin: 2px 0 0; accent-color: var(--dsw-alias-brand-primary); }
+.dpu-switch-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dpu-switch-label { font-weight: 500; font-size: 12px; }
+.dpu-switch-hint { color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 16px; }
+.dpu-interval-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.dpu-input-number { width: 76px; border-radius: 6px; padding: 4px 8px; box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); border: 0; font: inherit; }
+.dpu-select { border-radius: 6px; padding: 4px 8px; box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); border: 0; font: inherit; }
+.dpu-settings-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.dpu-settings-notice { color: var(--dsw-alias-state-success-primary); font-size: 11px; }
+.dpu-settings-error { color: var(--dsw-alias-state-error-primary); font-size: 11px; }
+.dpu-popup { position: fixed; right: 20px; bottom: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; width: 320px; border-radius: 12px; padding: 12px 14px; background: var(--dsw-alias-bg-overlay); box-shadow: 0 8px 28px rgba(0,0,0,0.28), inset 0 0 0 1px var(--dsw-alias-border-l1); color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px; }
+.dpu-popup-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
+.dpu-popup-close { border: 0; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font-size: 14px; line-height: 16px; padding: 0 2px; }
+.dpu-popup-body { color: var(--dsw-alias-label-secondary); }
+.dpu-popup-bar { height: 3px; border-radius: 2px; background: var(--dsw-alias-bg-layer-2); overflow: hidden; }
+.dpu-popup-bar-fill { height: 100%; background: var(--dsw-alias-brand-primary); transition: width 200ms linear; }
+.dpu-popup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 2px; }
 `
 
     // ---------------------------------------------------------------------
@@ -377,35 +477,45 @@ window.__ModuleLoader__.load({
 
     const SKIPPED_STATUSES = new Set(['local', 'git', 'tarball', 'unknown-source', 'shipped'])
 
-    function readIgnored() {
+    let ignoredMap = {}
+
+    function ignoredVersionOf(name) {
+      return Object.prototype.hasOwnProperty.call(ignoredMap, name) && typeof ignoredMap[name] === 'string' ? ignoredMap[name] : null
+    }
+
+    function syncIgnoredFrom(state) {
+      const settings = state !== null && typeof state === 'object' && state.settings !== null && typeof state.settings === 'object' ? state.settings : null
+      const ignored = settings !== null && settings.ignored !== null && typeof settings.ignored === 'object' ? settings.ignored : null
+      const next = {}
+      if (ignored !== null) {
+        for (const [name, version] of Object.entries(ignored)) {
+          if (typeof version === 'string' && version !== '') next[name] = version
+        }
+      }
+      ignoredMap = next
+    }
+
+    function setIgnore(name, latestVersion) {
+      const version = typeof latestVersion === 'string' && latestVersion !== '' ? latestVersion : null
+      if (version === null) delete ignoredMap[name]
+      else ignoredMap[name] = version
+      void postSettings({ ignored: { [name]: version } }).catch(() => {})
+    }
+
+    function readLegacyIgnored() {
       try {
         const raw = window.localStorage.getItem(IGNORE_KEY)
         if (typeof raw !== 'string' || raw === '') return {}
         const parsed = JSON.parse(raw)
-        return parsed !== null && typeof parsed === 'object' ? parsed : {}
+        if (parsed === null || typeof parsed !== 'object') return {}
+        const next = {}
+        for (const [name, version] of Object.entries(parsed)) {
+          if (typeof version === 'string' && version !== '') next[name] = version
+        }
+        return next
       } catch {
         return {}
       }
-    }
-
-    function writeIgnored(map) {
-      try {
-        window.localStorage.setItem(IGNORE_KEY, JSON.stringify(map))
-      } catch {
-        // localStorage may be unavailable; the tab still works without it.
-      }
-    }
-
-    function ignoredVersionOf(name) {
-      const map = readIgnored()
-      return Object.prototype.hasOwnProperty.call(map, name) && typeof map[name] === 'string' ? map[name] : null
-    }
-
-    function setIgnore(name, latestVersion) {
-      const map = readIgnored()
-      if (latestVersion === null) delete map[name]
-      else map[name] = latestVersion
-      writeIgnored(map)
     }
 
     const stateCache = { value: null, promise: null }
@@ -426,6 +536,7 @@ window.__ModuleLoader__.load({
             throw new Error(payload !== null && typeof payload.error === 'string' ? payload.error : `HTTP ${response.status}`)
           }
           stateCache.value = payload
+          syncIgnoredFrom(payload)
           return payload
         })
         .finally(() => {
@@ -440,6 +551,43 @@ window.__ModuleLoader__.load({
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ name }),
+      })
+        .then(async (response) => {
+          const payload = await response.json().catch(() => null)
+          invalidateState()
+          return { responseOk: response.ok, payload }
+        })
+        .catch((error) => {
+          invalidateState()
+          throw error
+        })
+    }
+
+    function postSettings(patch) {
+      return fetch(SETTINGS_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify(patch),
+      })
+        .then(async (response) => {
+          const payload = await response.json().catch(() => null)
+          invalidateState()
+          if (!response.ok || payload === null || payload.ok !== true) {
+            throw new Error(payload !== null && typeof payload.error === 'string' ? payload.error : `HTTP ${response.status}`)
+          }
+          return payload
+        })
+        .catch((error) => {
+          invalidateState()
+          throw error
+        })
+    }
+
+    function postBatch(names) {
+      return fetch(BATCH_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ names: Array.isArray(names) ? names : null }),
       })
         .then(async (response) => {
           const payload = await response.json().catch(() => null)
@@ -722,30 +870,91 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------------------------------------------------------------
-    // Bottom-right reminder (shell.overlay)
+    // Bottom-right timed reminder (shell.overlay)
     // ---------------------------------------------------------------------
 
-    const toastStore = { visible: false, count: 0, listeners: new Set() }
+    const popupStore = {
+      visible: false,
+      phase: 'idle',
+      count: 0,
+      updated: 0,
+      failed: 0,
+      done: 0,
+      total: 0,
+      seconds: POPUP_SECONDS,
+      listeners: new Set(),
+      timer: null,
+    }
 
-    function emitToast() {
-      for (const listener of toastStore.listeners) {
+    function emitPopup() {
+      for (const listener of popupStore.listeners) {
         try {
-          listener(toastStore)
+          listener(popupStore)
         } catch {
-          // A broken listener must not break the toast.
+          // A broken listener must not break the popup.
         }
       }
     }
 
-    function showToast(count) {
-      toastStore.count = count
-      toastStore.visible = true
-      emitToast()
+    function stopPopupTimer() {
+      if (popupStore.timer !== null) {
+        window.clearInterval(popupStore.timer)
+        popupStore.timer = null
+      }
     }
 
-    function hideToast() {
-      toastStore.visible = false
-      emitToast()
+    function startPopupTimer() {
+      stopPopupTimer()
+      popupStore.seconds = POPUP_SECONDS
+      popupStore.timer = window.setInterval(() => {
+        popupStore.seconds = Math.max(0, popupStore.seconds - 1)
+        if (popupStore.seconds <= 0) {
+          popupStore.visible = false
+          stopPopupTimer()
+        }
+        emitPopup()
+      }, 1000)
+    }
+
+    function showPopup(count) {
+      popupStore.visible = true
+      popupStore.phase = 'idle'
+      popupStore.count = count
+      popupStore.updated = 0
+      popupStore.failed = 0
+      popupStore.done = 0
+      popupStore.total = count
+      startPopupTimer()
+      emitPopup()
+    }
+
+    function showPopupWorking(names) {
+      popupStore.visible = true
+      popupStore.phase = 'working'
+      popupStore.count = names.length
+      popupStore.updated = 0
+      popupStore.failed = 0
+      popupStore.done = 0
+      popupStore.total = names.length
+      stopPopupTimer()
+      emitPopup()
+    }
+
+    function showPopupDone(updated, failed) {
+      popupStore.visible = true
+      popupStore.phase = 'done'
+      popupStore.updated = updated
+      popupStore.failed = failed
+      popupStore.done = updated
+      popupStore.total = updated + Math.max(failed, 0)
+      startPopupTimer()
+      emitPopup()
+    }
+
+    function hidePopup() {
+      stopPopupTimer()
+      popupStore.visible = false
+      emitPopup()
     }
 
     let runtimeContext = null
@@ -764,58 +973,176 @@ window.__ModuleLoader__.load({
       return false
     }
 
-    function createToast(t) {
-      return function PluginUpdaterToast() {
-        const [state, setState] = React.useState({ visible: toastStore.visible, count: toastStore.count })
+    function updatableNamesOf(state) {
+      const plugins = state !== null && typeof state === 'object' && Array.isArray(state.plugins) ? state.plugins : []
+      const names = []
+      for (const row of plugins) {
+        if (row === null || typeof row !== 'object') continue
+        if (row.status !== 'update-available') continue
+        if (typeof row.name !== 'string' || row.name === '') continue
+        if (ignoredVersionOf(row.name) !== null) continue
+        names.push(row.name)
+      }
+      return names
+    }
+
+    function createPopup(t) {
+      return function PluginUpdaterPopup() {
+        const [state, setState] = React.useState({
+          visible: popupStore.visible,
+          phase: popupStore.phase,
+          count: popupStore.count,
+          updated: popupStore.updated,
+          failed: popupStore.failed,
+          done: popupStore.done,
+          total: popupStore.total,
+          seconds: popupStore.seconds,
+        })
+        const [busy, setBusy] = React.useState(false)
 
         React.useEffect(() => {
-          const listener = (value) => setState({ visible: value.visible, count: value.count })
-          toastStore.listeners.add(listener)
+          const listener = (value) => setState({
+            visible: value.visible,
+            phase: value.phase,
+            count: value.count,
+            updated: value.updated,
+            failed: value.failed,
+            done: value.done,
+            total: value.total,
+            seconds: value.seconds,
+          })
+          popupStore.listeners.add(listener)
           return () => {
-            toastStore.listeners.delete(listener)
+            popupStore.listeners.delete(listener)
           }
         }, [])
 
         if (!state.visible) return null
-        return h('div', {
-          style: {
-            position: 'fixed',
-            right: '20px',
-            bottom: '20px',
-            zIndex: 9999,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            width: '300px',
-            borderRadius: '12px',
-            padding: '12px 14px',
-            background: 'var(--dsw-alias-bg-overlay)',
-            boxShadow: '0 8px 28px rgba(0,0,0,0.28), inset 0 0 0 1px var(--dsw-alias-border-l1)',
-            color: 'var(--dsw-alias-label-primary)',
-            fontSize: '12px',
-            lineHeight: '18px',
-          },
-        }, [
-          h('div', { key: 'title', style: { fontWeight: 600, fontSize: '13px' } }, format(t('toastTitle'), { n: state.count })),
-          h('div', { key: 'body', style: { color: 'var(--dsw-alias-label-secondary)' } }, t('toastBody')),
-          h('div', { key: 'actions', style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '2px' } }, [
+
+        const updateAll = () => {
+          if (busy) return
+          setBusy(true)
+          loadState(false)
+            .then((payload) => {
+              const names = updatableNamesOf(payload)
+              if (names.length === 0) {
+                hidePopup()
+                return null
+              }
+              showPopupWorking(names)
+              const stop = pollProgress((value) => {
+                if (value === null || typeof value !== 'object') return
+                popupStore.done = typeof value.index === 'number' ? value.index : popupStore.done
+                popupStore.total = typeof value.total === 'number' ? value.total : popupStore.total
+                emitPopup()
+              })
+              return postBatch(names)
+                .then(({ payload: result }) => {
+                  stop()
+                  const updated = result !== null && typeof result === 'object' && Array.isArray(result.updated) ? result.updated.length : 0
+                  const failed = result !== null && typeof result === 'object' && Array.isArray(result.failed) ? result.failed.length : names.length - updated
+                  showPopupDone(updated, failed)
+                  loadState(true).catch(() => {})
+                })
+                .catch(() => {
+                  stop()
+                  showPopupDone(0, names.length)
+                })
+            })
+            .catch(() => {
+              hidePopup()
+            })
+            .finally(() => setBusy(false))
+        }
+
+        const percent = Math.max(0, Math.min(100, Math.round((1 - state.seconds / POPUP_SECONDS) * 100)))
+        let title = format(t('popupTitle'), { n: state.count })
+        if (state.phase === 'working') title = format(t('popupWorking'), { done: state.done, total: state.total })
+        else if (state.phase === 'done') {
+          title = state.failed > 0
+            ? format(t('popupPartial'), { ok: state.updated, failed: state.failed })
+            : format(t('popupUpdated'), { n: state.updated })
+        }
+
+        const children = [
+          h('div', { key: 'title', className: 'dpu-popup-title' }, [
+            h('span', { key: 'text' }, title),
             h('button', {
-              key: 'later',
+              key: 'close',
               type: 'button',
-              style: { ...ghostButtonStyle, font: 'inherit', fontSize: '12px' },
-              onClick: hideToast,
-            }, t('toastDismiss')),
-            h('button', {
-              key: 'view',
-              type: 'button',
-              style: { ...primaryButtonStyle, font: 'inherit', fontSize: '12px' },
-              onClick: () => {
-                openPluginsPage()
-                hideToast()
-              },
-            }, t('toastView')),
+              className: 'dpu-popup-close',
+              title: t('popupClose'),
+              onClick: hidePopup,
+            }, '×'),
           ]),
-        ])
+        ]
+        if (state.phase === 'idle') {
+          children.push(h('div', { key: 'body', className: 'dpu-popup-body' }, t('popupBody')))
+        }
+        if (state.phase === 'working') {
+          children.push(h('div', { key: 'bar', className: 'dpu-popup-bar' }, [
+            h('div', {
+              key: 'fill',
+              className: 'dpu-popup-bar-fill',
+              style: { width: state.total > 0 ? `${Math.round((state.done / state.total) * 100)}%` : '0%' },
+            }),
+          ]))
+        } else {
+          children.push(h('div', {
+            key: 'countdown',
+            style: { display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--dsw-alias-label-secondary)', fontSize: '11px' },
+          }, [
+            h('span', { key: 'text' }, format(t('popupSeconds'), { n: state.seconds })),
+            h('div', { key: 'bar', className: 'dpu-popup-bar', style: { flex: '1' } }, [
+              h('div', { key: 'fill', className: 'dpu-popup-bar-fill', style: { width: `${percent}%` } }),
+            ]),
+          ]))
+        }
+
+        const actions = []
+        if (state.phase === 'idle') {
+          actions.push(h('button', {
+            key: 'view',
+            type: 'button',
+            className: 'dpu-btn dpu-btn-ghost',
+            onClick: () => {
+              openPluginsPage()
+              hidePopup()
+            },
+          }, t('popupView')))
+          actions.push(h('button', {
+            key: 'close',
+            type: 'button',
+            className: 'dpu-btn dpu-btn-ghost',
+            onClick: hidePopup,
+          }, t('popupClose')))
+          actions.push(h('button', {
+            key: 'all',
+            type: 'button',
+            className: 'dpu-btn dpu-btn-primary',
+            disabled: busy,
+            onClick: updateAll,
+          }, format(t('popupUpdateAll'), { n: state.count })))
+        } else if (state.phase === 'done') {
+          actions.push(h('button', {
+            key: 'view',
+            type: 'button',
+            className: 'dpu-btn dpu-btn-ghost',
+            onClick: () => {
+              openPluginsPage()
+              hidePopup()
+            },
+          }, t('popupView')))
+          actions.push(h('button', {
+            key: 'close',
+            type: 'button',
+            className: 'dpu-btn dpu-btn-ghost',
+            onClick: hidePopup,
+          }, t('popupClose')))
+        }
+        if (actions.length > 0) children.push(h('div', { key: 'actions', className: 'dpu-popup-actions' }, actions))
+
+        return h('div', { className: 'dpu-popup', role: 'status' }, children)
       }
     }
 
@@ -837,10 +1164,14 @@ window.__ModuleLoader__.load({
         const [batchConfirm, setBatchConfirm] = React.useState(null)
         const [batchRun, setBatchRun] = React.useState(null)
         const [ignoredRevision, setIgnoredRevision] = React.useState(0)
+        const [settingsForm, setSettingsForm] = React.useState(null)
+        const [settingsBusy, setSettingsBusy] = React.useState(false)
+        const [settingsNotice, setSettingsNotice] = React.useState(null)
         const alive = React.useRef(true)
         const busyRef = React.useRef(false)
         const dataRef = React.useRef(null)
         const lastLoadedAt = React.useRef(0)
+        const settingsInitialized = React.useRef(false)
 
         React.useEffect(() => {
           alive.current = true
@@ -851,6 +1182,32 @@ window.__ModuleLoader__.load({
 
         React.useEffect(() => {
           dataRef.current = data
+        }, [data])
+
+        React.useEffect(() => {
+          if (settingsInitialized.current) return
+          if (data === null || typeof data !== 'object') return
+          const settings = data.settings !== null && typeof data.settings === 'object' ? data.settings : null
+          const auto = settings !== null && settings.autoUpdate !== null && typeof settings.autoUpdate === 'object' ? settings.autoUpdate : null
+          if (auto === null) return
+          settingsInitialized.current = true
+          const scheduled = auto.scheduled !== null && typeof auto.scheduled === 'object' ? auto.scheduled : null
+          const minutes = scheduled !== null && typeof scheduled.intervalMinutes === 'number' ? scheduled.intervalMinutes : 360
+          let unit = 'minutes'
+          let value = minutes
+          if (minutes % 1440 === 0) {
+            unit = 'days'
+            value = minutes / 1440
+          } else if (minutes % 60 === 0) {
+            unit = 'hours'
+            value = minutes / 60
+          }
+          setSettingsForm({
+            pageOpen: auto.pageOpen === true,
+            scheduledEnabled: scheduled !== null && scheduled.enabled === true,
+            intervalValue: String(value),
+            intervalUnit: unit,
+          })
         }, [data])
 
         const load = React.useCallback((force) => {
@@ -971,42 +1328,98 @@ window.__ModuleLoader__.load({
           setBatchRun({ done: 0, total: names.length, current: names[0] })
           busyRef.current = true
           setNotice(null)
-          const failed = []
-          let done = 0
-          for (const name of names) {
-            if (!alive.current) break
-            setBatchRun({ done, total: names.length, current: name })
-            setBusy({ name })
-            try {
-              const payload = await updateOne(name)
-              if (payload !== null && typeof payload === 'object' && payload.ok === true) {
-                // success
-              } else {
-                failed.push(name)
-              }
-            } catch {
-              failed.push(name)
-            }
-            done += 1
-            if (alive.current) setBatchRun({ done, total: names.length, current: null })
+          const stop = pollProgress((value) => {
+            if (!alive.current || value === null || typeof value !== 'object') return
+            setBatchRun({
+              done: typeof value.index === 'number' ? value.index : 0,
+              total: typeof value.total === 'number' ? value.total : names.length,
+              current: null,
+            })
+          })
+          let payload = null
+          try {
+            const result = await postBatch(names)
+            payload = result.payload
+          } catch (error) {
+            payload = null
+          } finally {
+            stop()
           }
           busyRef.current = false
           if (!alive.current) return
           setBusy(null)
           setBatchRun(null)
-          if (failed.length === 0) {
-            setNotice({ kind: 'ok', lines: [format(t('batchSummaryOk'), { n: names.length })] })
+          if (payload !== null && typeof payload === 'object' && payload.ok === true) {
+            const updated = Array.isArray(payload.updated) ? payload.updated : []
+            const failed = Array.isArray(payload.failed) ? payload.failed : []
+            if (failed.length === 0) {
+              setNotice({ kind: 'ok', lines: [format(t('batchSummaryOk'), { n: updated.length })] })
+            } else {
+              const names = failed.map((entry) => (entry !== null && typeof entry === 'object' && typeof entry.name === 'string' ? entry.name : String(entry)))
+              setNotice({
+                kind: 'error',
+                lines: [format(t('batchSummaryPartial'), {
+                  ok: updated.length,
+                  failed: failed.length,
+                  names: names.join(', '),
+                })],
+              })
+            }
           } else {
-            setNotice({
-              kind: 'error',
-              lines: [format(t('batchSummaryPartial'), {
-                ok: names.length - failed.length,
-                failed: failed.length,
-                names: failed.join(', '),
-              })],
-            })
+            setNotice({ kind: 'error', lines: [t('updateNoDetail')] })
           }
           load(false).catch(() => {})
+        }
+
+        const settingsMinutesOf = (form) => {
+          const raw = Number.parseInt(form.intervalValue, 10)
+          if (!Number.isFinite(raw) || raw <= 0) return null
+          const factor = form.intervalUnit === 'days' ? 1440 : form.intervalUnit === 'hours' ? 60 : 1
+          return raw * factor
+        }
+
+        const saveSettings = () => {
+          if (settingsForm === null || settingsBusy) return
+          const minutes = settingsMinutesOf(settingsForm)
+          if (minutes === null || minutes < 30 || minutes > 43200) {
+            setSettingsNotice({ kind: 'error', text: t('settingsInvalidInterval') })
+            return
+          }
+          setSettingsBusy(true)
+          setSettingsNotice(null)
+          postSettings({
+            autoUpdate: {
+              pageOpen: settingsForm.pageOpen === true,
+              scheduled: {
+                enabled: settingsForm.scheduledEnabled === true,
+                intervalMinutes: minutes,
+              },
+            },
+          })
+            .then(() => {
+              if (!alive.current) return
+              setSettingsNotice({ kind: 'ok', text: t('settingsSaved') })
+              load(true).catch(() => {})
+            })
+            .catch((error) => {
+              if (!alive.current) return
+              const detail = error !== null && typeof error.message === 'string' ? error.message : t('updateNoDetail')
+              setSettingsNotice({ kind: 'error', text: format(t('settingsSaveFailed'), { detail }) })
+            })
+            .finally(() => {
+              if (alive.current) setSettingsBusy(false)
+            })
+        }
+
+        const formatStamp = (value) => {
+          if (typeof value !== 'string' || value === '') return ''
+          try {
+            const date = new Date(value)
+            if (Number.isNaN(date.getTime())) return value
+            return date.toLocaleString()
+          } catch {
+            return value
+          }
         }
 
         const plugins = data !== null && Array.isArray(data.plugins) ? data.plugins : []
@@ -1263,6 +1676,93 @@ window.__ModuleLoader__.load({
             ])))
           }
 
+          if (settingsForm !== null) {
+            const nextRunText = typeof data.nextRunAt === 'string' && data.nextRunAt !== ''
+              ? format(t('settingsNextRun'), { time: formatStamp(data.nextRunAt) })
+              : t('settingsNextRunNone')
+            const lastAutoRun = data.lastAutoRun !== null && typeof data.lastAutoRun === 'object' ? data.lastAutoRun : null
+            const lastRunText = lastAutoRun !== null && typeof lastAutoRun.finishedAt === 'string'
+              ? format(t('settingsLastRun'), {
+                time: formatStamp(lastAutoRun.finishedAt),
+                checked: typeof lastAutoRun.checked === 'number' ? lastAutoRun.checked : 0,
+                updated: Array.isArray(lastAutoRun.updated) ? lastAutoRun.updated.length : 0,
+                failed: Array.isArray(lastAutoRun.failed) ? lastAutoRun.failed.length : 0,
+              })
+              : t('settingsLastRunNone')
+            const settingsChildren = [
+              h('div', { key: 'title', className: 'dpu-settings-title' }, t('settingsTitle')),
+              h('div', { key: 'intro', className: 'dpu-settings-intro' }, t('settingsIntro')),
+              h('label', { key: 'pageOpen', className: 'dpu-switch-row' }, [
+                h('input', {
+                  type: 'checkbox',
+                  checked: settingsForm.pageOpen === true,
+                  onChange: (event) => setSettingsForm({ ...settingsForm, pageOpen: event.target.checked }),
+                }),
+                h('span', { key: 'text', className: 'dpu-switch-text' }, [
+                  h('span', { key: 'label', className: 'dpu-switch-label' }, t('settingsPageOpen')),
+                  h('span', { key: 'hint', className: 'dpu-switch-hint' }, t('settingsPageOpenHint')),
+                ]),
+              ]),
+              h('label', { key: 'scheduled', className: 'dpu-switch-row' }, [
+                h('input', {
+                  type: 'checkbox',
+                  checked: settingsForm.scheduledEnabled === true,
+                  onChange: (event) => setSettingsForm({ ...settingsForm, scheduledEnabled: event.target.checked }),
+                }),
+                h('span', { key: 'text', className: 'dpu-switch-text' }, [
+                  h('span', { key: 'label', className: 'dpu-switch-label' }, t('settingsScheduled')),
+                  h('span', { key: 'hint', className: 'dpu-switch-hint' }, t('settingsScheduledHint')),
+                ]),
+              ]),
+              h('div', { key: 'interval', className: 'dpu-interval-row' }, [
+                h('span', { key: 'label' }, t('settingsInterval')),
+                h('input', {
+                  key: 'value',
+                  type: 'number',
+                  className: 'dpu-input-number',
+                  min: 1,
+                  max: 43200,
+                  step: 1,
+                  value: settingsForm.intervalValue,
+                  onChange: (event) => setSettingsForm({ ...settingsForm, intervalValue: event.target.value }),
+                }),
+                h('select', {
+                  key: 'unit',
+                  className: 'dpu-select',
+                  value: settingsForm.intervalUnit,
+                  onChange: (event) => setSettingsForm({ ...settingsForm, intervalUnit: event.target.value }),
+                }, [
+                  h('option', { key: 'minutes', value: 'minutes' }, t('settingsUnitMinutes')),
+                  h('option', { key: 'hours', value: 'hours' }, t('settingsUnitHours')),
+                  h('option', { key: 'days', value: 'days' }, t('settingsUnitDays')),
+                ]),
+              ]),
+              h('div', { key: 'range', className: 'dpu-switch-hint' }, t('settingsRange')),
+              h('div', { key: 'persist', className: 'dpu-switch-hint' }, t('settingsPersistHint')),
+              h('div', { key: 'nextRun', className: 'dpu-switch-hint' }, nextRunText),
+              h('div', { key: 'lastRun', className: 'dpu-switch-hint' }, lastRunText),
+              ignoredCount > 0
+                ? h('div', { key: 'ignored', className: 'dpu-switch-hint' }, format(t('settingsIgnored'), { n: ignoredCount }))
+                : null,
+              h('div', { key: 'actions', className: 'dpu-settings-actions' }, [
+                settingsNotice !== null
+                  ? h('span', {
+                    key: 'notice',
+                    className: settingsNotice.kind === 'error' ? 'dpu-settings-error' : 'dpu-settings-notice',
+                  }, settingsNotice.text)
+                  : null,
+                h('button', {
+                  key: 'save',
+                  type: 'button',
+                  className: 'dpu-btn dpu-btn-primary',
+                  disabled: settingsBusy,
+                  onClick: saveSettings,
+                }, settingsBusy ? t('settingsSaving') : t('settingsSave')),
+              ].filter(Boolean)),
+            ].filter(Boolean)
+            rows.push(h('div', { key: 'settings', className: 'dpu-settings' }, settingsChildren))
+          }
+
           const footer = [
             h('span', { key: 'version' }, format(t('versionFooter'), { client: VERSION })),
           ]
@@ -1337,37 +1837,61 @@ window.__ModuleLoader__.load({
 
       ctx.slots.inject('shell.overlay', () => ctx.slots.register({
         name: 'shell.overlay',
-        id: 'dsh-plugin-updater-toast',
+        id: 'dsh-plugin-updater-popup',
         label: () => 'dsh-plugin-updater',
-      }, createToast(t)))
+      }, createPopup(t)))
 
-      // One gentle, session-scoped reminder: only when something is actually
-      // updatable and the tab was never opened in this browser session.
+      // Startup: migrate legacy ignore data to the Host, then either run the
+      // page-open automatic update or show a one-time timed reminder.
       ctx.effect(() => {
         let cancelled = false
-        const timer = window.setTimeout(() => {
+        void (async () => {
+          const legacy = readLegacyIgnored()
+          if (Object.keys(legacy).length > 0) {
+            try {
+              await postSettings({ ignored: legacy })
+              window.localStorage.removeItem(IGNORE_KEY)
+            } catch {
+              // Keep the legacy copy when the host refused the write.
+            }
+          }
+          let state = null
           try {
-            if (window.sessionStorage.getItem(TOAST_KEY) === '1') return
+            state = await loadState(false)
           } catch {
             return
           }
-          loadState(false)
-            .then((state) => {
-              if (cancelled || state === null || typeof state !== 'object') return
-              const counts = state.counts
-              if (counts === null || typeof counts !== 'object' || typeof counts.updatable !== 'number' || counts.updatable <= 0) return
-              try {
-                window.sessionStorage.setItem(TOAST_KEY, '1')
-              } catch {
-                return
+          if (cancelled) return
+          const settings = state !== null && typeof state === 'object' && state.settings !== null && typeof state.settings === 'object' ? state.settings : null
+          const auto = settings !== null && settings.autoUpdate !== null && typeof settings.autoUpdate === 'object' ? settings.autoUpdate : null
+          const names = updatableNamesOf(state)
+          if (auto !== null && auto.pageOpen === true && names.length > 0) {
+            showPopupWorking(names)
+            try {
+              const { payload } = await postBatch(names)
+              const updated = payload !== null && typeof payload === 'object' && Array.isArray(payload.updated) ? payload.updated.length : 0
+              const failed = payload !== null && typeof payload === 'object' && Array.isArray(payload.failed) ? payload.failed.length : names.length - updated
+              if (!cancelled) {
+                showPopupDone(updated, failed)
+                loadState(true).catch(() => {})
               }
-              showToast(counts.updatable)
-            })
-            .catch(() => {})
-        }, 6000)
+            } catch {
+              if (!cancelled) showPopupDone(0, names.length)
+            }
+            return
+          }
+          if (names.length === 0) return
+          const signature = names.slice().sort().join('|')
+          try {
+            if (window.sessionStorage.getItem(POPUP_KEY) === signature) return
+            window.sessionStorage.setItem(POPUP_KEY, signature)
+          } catch {
+            // sessionStorage may be unavailable; a reminder is still useful.
+          }
+          if (!cancelled) showPopup(names.length)
+        })()
         return () => {
           cancelled = true
-          window.clearTimeout(timer)
         }
       }, 'dsh-plugin-updater: update reminder')
     }
