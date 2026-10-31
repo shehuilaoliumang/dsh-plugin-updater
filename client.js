@@ -21,6 +21,13 @@ window.__ModuleLoader__.load({
       tab: '更新检查',
       title: '插件更新检查',
       intro: '检查已安装插件的新版本。点击「更新」会先卸载旧版本再安装新版本，失败时自动回滚；批量更新前会再确认一次。',
+      heroUpdatable: '有 {n} 个插件可更新',
+      heroCurrent: '全部插件都已是最新版本',
+      heroFailed: '有 {n} 个插件检查失败',
+      heroBody: '共 {total} 个已安装插件',
+      sectionUpdates: '可更新',
+      sectionOthers: '其他插件',
+      settingsToggle: '更新设置',
       refresh: '重新检查',
       refreshing: '正在检查…',
       loading: '正在检查插件版本…',
@@ -172,6 +179,13 @@ window.__ModuleLoader__.load({
       tab: 'Update check',
       title: 'Plugin updates',
       intro: 'Check installed plugins for newer versions. Update removes the old version and installs the new one, restoring the old version if the install fails; batch updates ask once more before starting.',
+      heroUpdatable: '{n} plugin updates available',
+      heroCurrent: 'All plugins are up to date',
+      heroFailed: '{n} plugins need attention',
+      heroBody: '{total} installed plugins',
+      sectionUpdates: 'Updates available',
+      sectionOthers: 'Other plugins',
+      settingsToggle: 'Update settings',
       refresh: 'Check again',
       refreshing: 'Checking…',
       loading: 'Checking plugin versions…',
@@ -362,29 +376,41 @@ window.__ModuleLoader__.load({
 .dpu-search-input:focus, .dpu-search-input:focus-visible { outline: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-brand-primary) 60%, transparent), var(--dpu-ring); }
 .dpu-progressbar { position: relative; height: 2px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--dsw-alias-border-l1) 55%, transparent); }
 .dpu-progressbar-fill { position: absolute; top: 0; bottom: 0; width: 32%; border-radius: 999px; background: var(--dsw-alias-brand-primary); animation: dpu-indeterminate 1.1s var(--dpu-ease) infinite; }
-.dpu-table-wrap { border-radius: var(--dpu-r-lg); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 40%, transparent); }
-.dpu-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-.dpu-table th { position: sticky; top: 0; z-index: 1; text-align: left; font-weight: 600; font-size: 10.5px; letter-spacing: 0.055em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); padding: 10px 14px; background: var(--dsw-alias-bg-layer-1); border-bottom: 1px solid var(--dsw-alias-border-l1); box-shadow: 0 1px 0 var(--dsw-alias-border-l1); }
-.dpu-table thead th:first-child { border-top-left-radius: var(--dpu-r-lg); }
-.dpu-table thead th:last-child { border-top-right-radius: var(--dpu-r-lg); }
-.dpu-table td { padding: 12px 14px; border-bottom: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 62%, transparent); vertical-align: middle; }
-.dpu-table tbody tr { transition: background 100ms var(--dpu-ease); }
-.dpu-table tbody tr:hover td { background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 72%, transparent); }
-.dpu-table tbody tr:last-child td { border-bottom: 0; }
-.dpu-table th:first-child, .dpu-table td:first-child { padding-left: 16px; }
-.dpu-table th:last-child, .dpu-table td:last-child { padding-right: 16px; }
-.dpu-col-name { width: 38%; }
-.dpu-col-version { width: 13%; white-space: nowrap; }
-.dpu-col-status { width: 15%; }
-.dpu-col-action { width: 21%; text-align: right; white-space: nowrap; }
-.dpu-name { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.dpu-name-title { font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dpu-name-id { color: var(--dsw-alias-label-secondary); font-size: 11.5px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dpu-name-note { color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 15px; white-space: normal; }
-.dpu-version { font-variant-numeric: tabular-nums; font-size: 12px; }
-.dpu-version-old { color: var(--dsw-alias-label-secondary); }
-.dpu-version-new { font-weight: 600; }
-.dpu-version-highlight { color: var(--dsw-alias-brand-primary); }
+.dpu-icon-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: 0 0 auto; border: 0; border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; transition: background 140ms var(--dpu-ease), color 140ms var(--dpu-ease), box-shadow 140ms var(--dpu-ease); }
+.dpu-icon-btn:hover:not(:disabled) { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+.dpu-icon-btn:disabled { opacity: 0.4; cursor: default; }
+.dpu-icon-btn-on { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 12%, transparent); color: var(--dsw-alias-brand-primary); }
+.dpu-hero { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: var(--dpu-r-lg); background: linear-gradient(135deg, color-mix(in srgb, var(--dsw-alias-brand-primary) 11%, var(--dsw-alias-bg-layer-1)), color-mix(in srgb, var(--dsw-alias-bg-layer-1) 74%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-brand-primary) 15%, transparent); }
+.dpu-hero-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; background: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent); color: var(--dsw-alias-brand-primary); }
+.dpu-hero-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.dpu-hero-title { font-size: 14px; font-weight: 600; line-height: 20px; letter-spacing: -0.012em; }
+.dpu-hero-body { color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 16px; }
+.dpu-hero-ok { background: linear-gradient(135deg, color-mix(in srgb, var(--dsw-alias-state-success-primary) 10%, var(--dsw-alias-bg-layer-1)), color-mix(in srgb, var(--dsw-alias-bg-layer-1) 74%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent); }
+.dpu-hero-ok .dpu-hero-icon { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); color: var(--dsw-alias-state-success-primary); }
+.dpu-hero-warn { background: linear-gradient(135deg, color-mix(in srgb, var(--dsw-alias-state-warn-primary) 11%, var(--dsw-alias-bg-layer-1)), color-mix(in srgb, var(--dsw-alias-bg-layer-1) 74%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 22%, transparent); }
+.dpu-hero-warn .dpu-hero-icon { background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent); color: var(--dsw-alias-state-warn-primary); }
+.dpu-list { display: flex; flex-direction: column; border-radius: var(--dpu-r-lg); background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 32%, transparent); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); overflow: hidden; }
+.dpu-section { display: flex; flex-direction: column; }
+.dpu-section + .dpu-section { border-top: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 62%, transparent); }
+.dpu-section-head { display: flex; align-items: center; gap: 8px; padding: 11px 18px 7px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); }
+.dpu-section-head-count { font-variant-numeric: tabular-nums; opacity: 0.7; }
+.dpu-item { display: flex; align-items: center; gap: 16px; padding: 12px 18px; transition: background 120ms var(--dpu-ease); }
+.dpu-item + .dpu-item { border-top: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 48%, transparent); }
+.dpu-item:hover { background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 70%, transparent); }
+.dpu-item-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.dpu-item-title { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpu-item-meta { display: flex; align-items: center; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 16px; min-width: 0; }
+.dpu-item-source { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dpu-item-note { color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 15px; white-space: normal; }
+.dpu-versions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 136px; font-variant-numeric: tabular-nums; font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-secondary); white-space: nowrap; }
+.dpu-versions-arrow { color: var(--dsw-alias-label-secondary); opacity: 0.55; }
+.dpu-versions-new { color: var(--dsw-alias-label-primary); font-weight: 600; }
+.dpu-versions-new .dpu-versions-arrow { color: var(--dsw-alias-brand-primary); opacity: 1; }
+.dpu-item-status { flex: 0 0 auto; min-width: 84px; display: flex; justify-content: flex-start; }
+.dpu-item-actions { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.dpu-item-secondary { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 120ms var(--dpu-ease); }
+.dpu-item:hover .dpu-item-secondary, .dpu-item:focus-within .dpu-item-secondary { opacity: 1; }
+@media (hover: none) { .dpu-item-secondary { opacity: 1; } }
 .dpu-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 9px; font-size: 11px; line-height: 15px; font-weight: 500; white-space: nowrap; }
 .dpu-badge::before { content: ''; width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; opacity: 0.85; }
 .dpu-badge-update { background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent); color: var(--dsw-alias-state-warn-primary); }
@@ -467,10 +493,8 @@ window.__ModuleLoader__.load({
 @media (max-width: 720px) {
   .dpu-head { flex-direction: column; align-items: flex-start; gap: 12px; }
   .dpu-head-actions { width: 100%; justify-content: flex-end; }
-  .dpu-col-name { width: 46%; }
-  .dpu-col-version { width: 14%; }
-  .dpu-col-status { width: 16%; }
-  .dpu-col-action { width: 24%; }
+  .dpu-item { flex-wrap: wrap; row-gap: 8px; }
+  .dpu-versions { min-width: 0; }
   .dpu-search-input { width: 100%; }
   .dpu-toolbar-right { width: 100%; }
   .dpu-panel { padding: 16px; }
@@ -1109,6 +1133,14 @@ window.__ModuleLoader__.load({
           h('circle', { key: 'dot', cx: 8, cy: 11.6, r: 0.95, fill: 'currentColor' }),
         ])
       }
+      if (kind === 'sliders') {
+        return h('svg', common, [
+          h('path', { key: 'lines', d: 'M3 4.4h10M3 8h10M3 11.6h10', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+          h('circle', { key: 'a', cx: 5.6, cy: 4.4, r: 1.55, fill: 'var(--dsw-alias-bg-overlay)', stroke: 'currentColor', strokeWidth: 1.5 }),
+          h('circle', { key: 'b', cx: 10.2, cy: 8, r: 1.55, fill: 'var(--dsw-alias-bg-overlay)', stroke: 'currentColor', strokeWidth: 1.5 }),
+          h('circle', { key: 'c', cx: 6.8, cy: 11.6, r: 1.55, fill: 'var(--dsw-alias-bg-overlay)', stroke: 'currentColor', strokeWidth: 1.5 }),
+        ])
+      }
       return h('svg', common, [
         h('path', { key: 'top', d: 'M2.5 8a5.5 5.5 0 0 1 9.4-3.85', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
         h('path', { key: 'top-head', d: 'M12.2 1.9v3.4H8.8', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
@@ -1400,6 +1432,7 @@ window.__ModuleLoader__.load({
         const [settingsForm, setSettingsForm] = React.useState(null)
         const [settingsBusy, setSettingsBusy] = React.useState(false)
         const [settingsNotice, setSettingsNotice] = React.useState(null)
+        const [settingsOpen, setSettingsOpen] = React.useState(false)
         const alive = React.useRef(true)
         const busyRef = React.useRef(false)
         const dataRef = React.useRef(null)
@@ -1783,18 +1816,7 @@ window.__ModuleLoader__.load({
             ]))
           }
 
-          if (updatableRows.length === 0 && counts.failed === 0 && batchRun === null && batchConfirm === null) {
-            rows.push(h('div', { key: 'uptodate', className: 'dpu-notice dpu-notice-ok' }, [
-              h('div', { key: 'text', className: 'dpu-notice-text' }, [
-                h('span', { key: 'title', className: 'dpu-notice-title' }, t('allUpToDateTitle')),
-                h('span', { key: 'body' }, format(t('allUpToDateBody'), {
-                  time: typeof data.checkedAt === 'string' ? formatTime(data.checkedAt) : t('noVersion'),
-                })),
-              ]),
-            ]))
-          }
-
-          const body = visibleRows.map((entry) => {
+          const buildItem = (entry) => {
             const row = entry.row
             const name = entry.name
             const title = typeof row.title === 'string' && row.title !== '' ? row.title : name
@@ -1812,83 +1834,124 @@ window.__ModuleLoader__.load({
               const hint = skipTextOf(t, row.status)
               if (hint !== null && hint !== '') noteLines.push(hint)
             }
-            const actionCell = h('td', { key: 'action', className: 'dpu-col-action' }, isBusy
-              ? h('span', { className: 'dpu-inline-row' }, [
+
+            const versionNode = isActionable
+              ? h('span', { key: 'versions', className: 'dpu-versions dpu-versions-new' }, [
+                h('span', { key: 'old' }, current),
+                h('span', { key: 'arrow', className: 'dpu-versions-arrow' }, '→'),
+                h('span', { key: 'new' }, latest),
+              ])
+              : h('span', { key: 'versions', className: 'dpu-versions' }, current)
+
+            const secondary = []
+            if (isActionable) {
+              secondary.push(h('button', {
+                key: 'ignore',
+                type: 'button',
+                className: 'dpu-btn dpu-btn-ghost dpu-btn-small',
+                disabled: isBatch,
+                onClick: () => {
+                  setIgnore(name, entry.latest)
+                  setIgnoredRevision((value) => value + 1)
+                },
+              }, t('ignoreVersion')))
+            }
+            if (entry.ignored) {
+              secondary.push(h('button', {
+                key: 'unignore',
+                type: 'button',
+                className: 'dpu-btn dpu-btn-ghost dpu-btn-small',
+                disabled: isBatch,
+                onClick: () => {
+                  setIgnore(name, null)
+                  setIgnoredRevision((value) => value + 1)
+                },
+              }, t('unignore')))
+            }
+            if (row.status === 'error' || row.status === 'unknown-version') {
+              secondary.push(h('button', {
+                key: 'retry',
+                type: 'button',
+                className: 'dpu-btn dpu-btn-small',
+                onClick: () => load(true),
+              }, t('retry')))
+            }
+            if (!isActionable && !entry.ignored && row.status !== 'error' && row.status !== 'unknown-version' && openPackage !== null) {
+              secondary.push(h('button', {
+                key: 'open',
+                type: 'button',
+                className: 'dpu-btn dpu-btn-ghost dpu-btn-small',
+                onClick: () => { openPackage(name) },
+              }, t('openDetail')))
+            }
+
+            const primary = isBusy
+              ? h('span', { key: 'busy', className: 'dpu-inline-row' }, [
                 h('span', { key: 'spinner', className: 'dpu-spinner' }),
                 h('span', { key: 'text', className: 'dpu-progress-text' }, [
                   h('span', { key: 'phase', className: 'dpu-progress-phase' }, progress === null ? t('updating') : phaseText(t, progress)),
                   h('span', { key: 'elapsed', className: 'dpu-progress-elapsed' }, progress === null ? '' : formatElapsed(progress) === '' ? '' : format(t('progressElapsed'), { seconds: formatElapsed(progress) })),
                 ]),
               ])
-              : h('span', { className: 'dpu-inline-row' }, [
-                isActionable
-                  ? h('button', {
-                    key: 'update',
-                    type: 'button',
-                    className: 'dpu-btn dpu-btn-primary dpu-btn-small',
-                    disabled: isBatch,
-                    onClick: () => runSingle(name),
-                  }, t('update'))
-                  : null,
-                isActionable
-                  ? h('button', {
-                    key: 'ignore',
-                    type: 'button',
-                    className: 'dpu-btn dpu-btn-ghost dpu-btn-small',
-                    disabled: isBatch,
-                    onClick: () => {
-                      setIgnore(name, entry.latest)
-                      setIgnoredRevision((value) => value + 1)
-                    },
-                  }, t('ignoreVersion'))
-                  : null,
-                entry.ignored
-                  ? h('button', {
-                    key: 'unignore',
-                    type: 'button',
-                    className: 'dpu-btn dpu-btn-ghost dpu-btn-small',
-                    disabled: isBatch,
-                    onClick: () => {
-                      setIgnore(name, null)
-                      setIgnoredRevision((value) => value + 1)
-                    },
-                  }, t('unignore'))
-                  : null,
-                (row.status === 'error' || row.status === 'unknown-version')
-                  ? h('button', {
-                    key: 'retry',
-                    type: 'button',
-                    className: 'dpu-btn dpu-btn-small',
-                    onClick: () => load(true),
-                  }, t('retry'))
-                  : null,
-                (!isActionable && !entry.ignored && row.status !== 'error' && row.status !== 'unknown-version' && openPackage !== null)
-                  ? h('button', {
-                    key: 'open',
-                    type: 'button',
-                    className: 'dpu-btn dpu-btn-ghost dpu-btn-small',
-                    onClick: () => { openPackage(name) },
-                  }, t('openDetail'))
-                  : null,
+              : isActionable
+                ? h('button', {
+                  key: 'update',
+                  type: 'button',
+                  className: 'dpu-btn dpu-btn-primary dpu-btn-small',
+                  disabled: isBatch,
+                  onClick: () => runSingle(name),
+                }, t('update'))
+                : null
+
+            return h('div', { key: name, className: 'dpu-item' }, [
+              h('div', { key: 'main', className: 'dpu-item-main' }, [
+                h('div', { key: 'title', className: 'dpu-item-title', title: title === name ? name : title }, title),
+                source === '' ? null : h('div', { key: 'meta', className: 'dpu-item-meta' }, h('span', { key: 'source', className: 'dpu-item-source', title: source }, source)),
+                noteLines.map((line, index) => h('div', { key: `note-${index}`, className: 'dpu-item-note' }, line)),
               ].filter(Boolean)),
-            )
-            const nameCell = h('td', { key: 'name', className: 'dpu-col-name' }, h('div', { className: 'dpu-name' }, [
-              h('span', { key: 'title', className: 'dpu-name-title', title: name }, title === name ? name : `${title} (${name})`),
-              source === ''
-                ? null
-                : h('span', { key: 'source', className: 'dpu-name-id', title: source }, source),
-              noteLines.map((line, index) => h('span', { key: `note-${index}`, className: 'dpu-name-note' }, line)),
-            ].filter(Boolean)))
-            return h('tr', { key: name }, [
-              nameCell,
-              h('td', { key: 'current', className: 'dpu-col-version' }, h('span', { className: 'dpu-version dpu-version-old' }, current)),
-              h('td', { key: 'latest', className: 'dpu-col-version' }, h('span', {
-                className: `dpu-version${entry.latest !== null ? ' dpu-version-new' : ''}${isActionable ? ' dpu-version-highlight' : ''}`,
-              }, latest)),
-              h('td', { key: 'status', className: 'dpu-col-status' }, badge(t, status)),
-              actionCell,
+              versionNode,
+              h('div', { key: 'status', className: 'dpu-item-status' }, badge(t, status)),
+              h('div', { key: 'actions', className: 'dpu-item-actions' }, [
+                secondary.length === 0 ? null : h('span', { key: 'secondary', className: 'dpu-item-secondary' }, secondary),
+                primary,
+              ].filter(Boolean)),
             ])
-          })
+          }
+
+          const updatesRows = visibleRows.filter((entry) => entry.row.status === 'update-available' && !entry.ignored)
+          const othersRows = visibleRows.filter((entry) => !(entry.row.status === 'update-available' && !entry.ignored))
+
+          if (data !== null) {
+            const failedCount = counts.failed
+            const heroMode = updatableRows.length > 0 ? 'updates' : failedCount > 0 ? 'warn' : 'ok'
+            const heroTitle = heroMode === 'updates'
+              ? format(t('heroUpdatable'), { n: updatableRows.length })
+              : heroMode === 'warn'
+                ? format(t('heroFailed'), { n: failedCount })
+                : t('heroCurrent')
+            const checkedStamp = typeof data.checkedAt === 'string' && data.checkedAt !== ''
+              ? ` · ${formatTime(data.checkedAt)}`
+              : ''
+            rows.push(h('div', {
+              key: 'hero',
+              className: `dpu-hero${heroMode === 'warn' ? ' dpu-hero-warn' : heroMode === 'ok' ? ' dpu-hero-ok' : ''}`,
+            }, [
+              h('span', { key: 'icon', className: 'dpu-hero-icon' }, glyph(heroMode === 'updates' ? 'sync' : heroMode === 'warn' ? 'alert' : 'check', 20)),
+              h('div', { key: 'text', className: 'dpu-hero-text' }, [
+                h('div', { key: 'title', className: 'dpu-hero-title' }, heroTitle),
+                h('div', { key: 'body', className: 'dpu-hero-body' }, format(t('heroBody'), { total: counts.total }) + checkedStamp),
+              ]),
+              heroMode === 'updates'
+                ? h('button', {
+                  key: 'go',
+                  type: 'button',
+                  className: 'dpu-btn dpu-btn-primary',
+                  disabled: isBatch,
+                  onClick: () => setBatchConfirm({ names: updatableRows.map((entry) => entry.name) }),
+                }, format(t('updateAll'), { n: updatableRows.length }))
+                : null,
+            ].filter(Boolean)))
+          }
 
           rows.push(h('div', { key: 'toolbar', className: 'dpu-toolbar' }, [
             h('div', { key: 'left', className: 'dpu-toolbar-left' }, [
@@ -1926,20 +1989,32 @@ window.__ModuleLoader__.load({
                 },
               }, t('clearFilters'))) : null,
             ]))
-          } else {
-            rows.push(h('div', { key: 'table', className: 'dpu-table-wrap', 'aria-busy': phase === 'loading' ? 'true' : 'false' }, h('table', { className: 'dpu-table' }, [
-              h('thead', { key: 'head' }, h('tr', null, [
-                h('th', { key: 'name', scope: 'col', className: 'dpu-col-name' }, t('colName')),
-                h('th', { key: 'current', scope: 'col', className: 'dpu-col-version' }, t('colCurrent')),
-                h('th', { key: 'latest', scope: 'col', className: 'dpu-col-version' }, t('colLatest')),
-                h('th', { key: 'status', scope: 'col', className: 'dpu-col-status' }, t('colStatus')),
-                h('th', { key: 'action', scope: 'col', className: 'dpu-col-action' }, t('colAction')),
-              ])),
-              h('tbody', { key: 'body' }, body),
-            ])))
+          } else if (data !== null) {
+            const sections = []
+            if (filter === 'all' && updatesRows.length > 0) {
+              sections.push(h('div', { key: 'updates', className: 'dpu-section' }, [
+                h('div', { key: 'head', className: 'dpu-section-head' }, [
+                  h('span', { key: 'label' }, t('sectionUpdates')),
+                  h('span', { key: 'count', className: 'dpu-section-head-count' }, String(updatesRows.length)),
+                ]),
+                ...updatesRows.map(buildItem),
+              ]))
+              if (othersRows.length > 0) {
+                sections.push(h('div', { key: 'others', className: 'dpu-section' }, [
+                  h('div', { key: 'head', className: 'dpu-section-head' }, [
+                    h('span', { key: 'label' }, t('sectionOthers')),
+                    h('span', { key: 'count', className: 'dpu-section-head-count' }, String(othersRows.length)),
+                  ]),
+                  ...othersRows.map(buildItem),
+                ]))
+              }
+            } else {
+              sections.push(...visibleRows.map(buildItem))
+            }
+            rows.push(h('div', { key: 'list', className: 'dpu-list', 'aria-busy': phase === 'loading' ? 'true' : 'false' }, sections))
           }
 
-          if (settingsForm !== null) {
+          if (settingsForm !== null && settingsOpen) {
             const nextRunText = typeof data.nextRunAt === 'string' && data.nextRunAt !== ''
               ? format(t('settingsNextRun'), { time: formatStamp(data.nextRunAt) })
               : t('settingsNextRunNone')
@@ -2037,12 +2112,13 @@ window.__ModuleLoader__.load({
           }
 
           const footer = [
-            h('span', { key: 'version' }, format(t('versionFooter'), { client: VERSION })),
+            h('span', {
+              key: 'version',
+              title: typeof data.registry === 'string' && data.registry !== '' ? data.registry : undefined,
+            }, format(t('versionFooter'), { client: VERSION })),
           ]
-          if (hostVersion !== null) footer.push(h('span', { key: 'host' }, format(t('hostVersionFooter'), { host: hostVersion })))
+          if (versionMismatch && hostVersion !== null) footer.push(h('span', { key: 'host' }, format(t('hostVersionFooter'), { host: hostVersion })))
           if (typeof data.checkedAt === 'string') footer.push(h('span', { key: 'checked' }, formatCheckedAt(t, data.checkedAt)))
-          if (typeof data.registry === 'string' && data.registry !== '') footer.push(h('span', { key: 'registry' }, format(t('registry'), { registry: data.registry })))
-          footer.push(h('span', { key: 'hint' }, t('skipHint')))
           rows.push(h('div', { key: 'foot', className: 'dpu-foot' }, footer))
         }
 
@@ -2057,29 +2133,26 @@ window.__ModuleLoader__.load({
               ]),
             ]),
             h('div', { key: 'actions', className: 'dpu-head-actions' }, [
-              updatableRows.length > 0
-                ? h('button', {
-                  key: 'all',
-                  type: 'button',
-                  className: 'dpu-btn dpu-btn-primary',
-                  disabled: busyRef.current || isBatch,
-                  onClick: () => {
-                    const names = updatableRows.map((entry) => entry.name)
-                    if (names.length === 0) return
-                    setBatchConfirm({ names })
-                  },
-                }, [
-                  h('span', { key: 'icon', style: { display: 'inline-flex' } }, glyph('sync', 14)),
-                  format(t('updateAll'), { n: updatableRows.length }),
-                ])
-                : null,
               h('button', {
                 key: 'refresh',
                 type: 'button',
-                className: 'dpu-btn',
+                className: 'dpu-icon-btn',
+                title: phase === 'loading' ? t('refreshing') : t('refresh'),
+                'aria-label': phase === 'loading' ? t('refreshing') : t('refresh'),
                 disabled: phase === 'loading' || busyRef.current,
                 onClick: () => load(true),
-              }, phase === 'loading' ? t('refreshing') : t('refresh')),
+              }, phase === 'loading' ? h('span', { key: 'spin', className: 'dpu-spinner' }) : glyph('sync', 18)),
+              settingsForm === null
+                ? null
+                : h('button', {
+                  key: 'settings',
+                  type: 'button',
+                  className: `dpu-icon-btn${settingsOpen ? ' dpu-icon-btn-on' : ''}`,
+                  title: t('settingsToggle'),
+                  'aria-label': t('settingsToggle'),
+                  'aria-expanded': settingsOpen ? 'true' : 'false',
+                  onClick: () => setSettingsOpen((value) => !value),
+                }, glyph('sliders', 18)),
             ].filter(Boolean)),
           ]),
           ...rows,
