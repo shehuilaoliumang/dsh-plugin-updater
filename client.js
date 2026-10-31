@@ -140,6 +140,8 @@ window.__ModuleLoader__.load({
       colStatus: '状态',
       colAction: '操作',
       navLabel: '更新检查',
+      viewGrid: '卡片视图',
+      viewList: '列表视图',
       settingsTitle: '自动更新',
       settingsIntro: '自动更新只处理 npm 安装的第三方插件；官方自带、本地链接、Git、压缩包来源的插件会被跳过，失败会自动回滚旧版本。',
       settingsPageOpen: '打开页面时自动更新',
@@ -298,6 +300,8 @@ window.__ModuleLoader__.load({
       colStatus: 'Status',
       colAction: 'Action',
       navLabel: 'Update check',
+      viewGrid: 'Card view',
+      viewList: 'List view',
       settingsTitle: 'Automatic updates',
       settingsIntro: 'Automatic updates only handle npm-installed third-party plugins; DSH-shipped, local, Git and tarball plugins are skipped, and a failed install restores the old version.',
       settingsPageOpen: 'Update when a page opens',
@@ -389,10 +393,36 @@ window.__ModuleLoader__.load({
 .dpu-hero-ok .dpu-hero-icon { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); color: var(--dsw-alias-state-success-primary); }
 .dpu-hero-warn { background: linear-gradient(135deg, color-mix(in srgb, var(--dsw-alias-state-warn-primary) 11%, var(--dsw-alias-bg-layer-1)), color-mix(in srgb, var(--dsw-alias-bg-layer-1) 74%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 22%, transparent); }
 .dpu-hero-warn .dpu-hero-icon { background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent); color: var(--dsw-alias-state-warn-primary); }
-.dpu-list { display: flex; flex-direction: column; border-radius: var(--dpu-r-lg); background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 32%, transparent); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); overflow: hidden; }
-.dpu-section { display: flex; flex-direction: column; }
-.dpu-section + .dpu-section { border-top: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 62%, transparent); }
-.dpu-section-head { display: flex; align-items: center; gap: 8px; padding: 11px 18px 7px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); }
+.dpu-list { display: flex; flex-direction: column; gap: 14px; }
+.dpu-section { display: flex; flex-direction: column; border-radius: var(--dpu-r-lg); background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 30%, transparent); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); overflow: hidden; }
+.dpu-section-toggle { width: 100%; border: 0; margin: 0; box-shadow: none; background: transparent; cursor: pointer; font: inherit; text-align: left; border-radius: 0; }
+.dpu-section-toggle:hover { background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 55%, transparent); color: var(--dsw-alias-label-primary); }
+.dpu-section-chevron { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 12px; height: 12px; color: var(--dsw-alias-label-secondary); transition: transform 160ms var(--dpu-ease); }
+.dpu-section-chevron-open { transform: rotate(90deg); }
+.dpu-section-head { display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dsw-alias-label-secondary); }
+.dpu-rows { display: flex; flex-direction: column; }
+.dpu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+.dpu-grid-flat { padding: 0; }
+.dpu-card { position: relative; display: flex; flex-direction: column; gap: 9px; padding: 14px; border-radius: var(--dpu-r-md); background: var(--dsw-alias-bg-layer-1); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); transition: transform 160ms var(--dpu-ease), box-shadow 160ms var(--dpu-ease), background 160ms var(--dpu-ease); }
+.dpu-card:hover { transform: translateY(-1px); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l2), 0 8px 20px rgba(0, 0, 0, 0.16); }
+.dpu-card-new { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent); background: linear-gradient(160deg, color-mix(in srgb, var(--dsw-alias-state-warn-primary) 7%, var(--dsw-alias-bg-layer-1)), var(--dsw-alias-bg-layer-1)); }
+.dpu-card-new:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 42%, transparent), 0 8px 20px rgba(0, 0, 0, 0.16); }
+.dpu-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.dpu-card-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.dpu-card-title { font-size: 12.5px; font-weight: 600; line-height: 17px; color: var(--dsw-alias-label-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpu-card-source { font-size: 10.5px; line-height: 15px; color: var(--dsw-alias-label-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpu-card-status { flex: 0 0 auto; }
+.dpu-card-versions { align-self: flex-start; }
+.dpu-card-versions .dpu-versions { min-width: 0; justify-content: flex-start; font-size: 12px; }
+.dpu-card-notes { display: flex; flex-direction: column; gap: 3px; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-secondary); }
+.dpu-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 2px; }
+.dpu-card-secondary { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 120ms var(--dpu-ease); }
+.dpu-card:hover .dpu-card-secondary, .dpu-card:focus-within .dpu-card-secondary { opacity: 1; }
+@media (hover: none) { .dpu-card-secondary { opacity: 1; } }
+.dpu-segment { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 8px; background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 55%, transparent); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l1); }
+.dpu-segment-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; transition: background 120ms var(--dpu-ease), color 120ms var(--dpu-ease), box-shadow 120ms var(--dpu-ease); }
+.dpu-segment-btn:hover { color: var(--dsw-alias-label-primary); background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 60%, transparent); }
+.dpu-segment-btn-on { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22), inset 0 0 0 1px var(--dsw-alias-border-l1); }
 .dpu-section-head-count { font-variant-numeric: tabular-nums; opacity: 0.7; }
 .dpu-item { display: flex; align-items: center; gap: 16px; padding: 12px 18px; transition: background 120ms var(--dpu-ease); }
 .dpu-item + .dpu-item { border-top: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 48%, transparent); }
@@ -495,6 +525,7 @@ window.__ModuleLoader__.load({
   .dpu-head-actions { width: 100%; justify-content: flex-end; }
   .dpu-item { flex-wrap: wrap; row-gap: 8px; }
   .dpu-versions { min-width: 0; }
+  .dpu-grid { grid-template-columns: minmax(0, 1fr); }
   .dpu-search-input { width: 100%; }
   .dpu-toolbar-right { width: 100%; }
   .dpu-panel { padding: 16px; }
@@ -1141,6 +1172,33 @@ window.__ModuleLoader__.load({
           h('circle', { key: 'c', cx: 6.8, cy: 11.6, r: 1.55, fill: 'var(--dsw-alias-bg-overlay)', stroke: 'currentColor', strokeWidth: 1.5 }),
         ])
       }
+      if (kind === 'grid') {
+        return h('svg', common, [
+          h('rect', { key: 'a', x: 2.4, y: 2.4, width: 4.7, height: 4.7, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.4 }),
+          h('rect', { key: 'b', x: 8.9, y: 2.4, width: 4.7, height: 4.7, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.4 }),
+          h('rect', { key: 'c', x: 2.4, y: 8.9, width: 4.7, height: 4.7, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.4 }),
+          h('rect', { key: 'd', x: 8.9, y: 8.9, width: 4.7, height: 4.7, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.4 }),
+        ])
+      }
+      if (kind === 'list') {
+        return h('svg', common, [
+          h('path', { key: 'l1', d: 'M5.6 4.1h8.1', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+          h('path', { key: 'l2', d: 'M5.6 8h8.1', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+          h('path', { key: 'l3', d: 'M5.6 11.9h8.1', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+          h('circle', { key: 'd1', cx: 2.9, cy: 4.1, r: 1, fill: 'currentColor' }),
+          h('circle', { key: 'd2', cx: 2.9, cy: 8, r: 1, fill: 'currentColor' }),
+          h('circle', { key: 'd3', cx: 2.9, cy: 11.9, r: 1, fill: 'currentColor' }),
+        ])
+      }
+      if (kind === 'chevron') {
+        return h('svg', common, h('path', {
+          d: 'M6.1 3.6L10.5 8l-4.4 4.4',
+          stroke: 'currentColor',
+          strokeWidth: 1.7,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }))
+      }
       return h('svg', common, [
         h('path', { key: 'top', d: 'M2.5 8a5.5 5.5 0 0 1 9.4-3.85', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
         h('path', { key: 'top-head', d: 'M12.2 1.9v3.4H8.8', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
@@ -1433,6 +1491,14 @@ window.__ModuleLoader__.load({
         const [settingsBusy, setSettingsBusy] = React.useState(false)
         const [settingsNotice, setSettingsNotice] = React.useState(null)
         const [settingsOpen, setSettingsOpen] = React.useState(false)
+        const [viewMode, setViewMode] = React.useState(() => {
+          try {
+            return localStorage.getItem('dsh-plugin-updater/view') === 'list' ? 'list' : 'grid'
+          } catch {
+            return 'grid'
+          }
+        })
+        const [collapsed, setCollapsed] = React.useState({})
         const alive = React.useRef(true)
         const busyRef = React.useRef(false)
         const dataRef = React.useRef(null)
@@ -1449,6 +1515,23 @@ window.__ModuleLoader__.load({
         React.useEffect(() => {
           dataRef.current = data
         }, [data])
+
+        const changeView = React.useCallback((mode) => {
+          setViewMode(mode)
+          try {
+            localStorage.setItem('dsh-plugin-updater/view', mode)
+          } catch {
+            /* storage unavailable */
+          }
+        }, [])
+
+        const toggleSection = React.useCallback((key) => {
+          setCollapsed((previous) => {
+            const next = { ...previous }
+            next[key] = !next[key]
+            return next
+          })
+        }, [])
 
         React.useEffect(() => {
           if (settingsInitialized.current) return
@@ -1816,7 +1899,7 @@ window.__ModuleLoader__.load({
             ]))
           }
 
-          const buildItem = (entry) => {
+          const entryInfo = (entry) => {
             const row = entry.row
             const name = entry.name
             const title = typeof row.title === 'string' && row.title !== '' ? row.title : name
@@ -1825,7 +1908,9 @@ window.__ModuleLoader__.load({
             const status = entry.ignored && row.status === 'update-available' ? 'ignored' : (typeof row.status === 'string' ? row.status : 'unknown')
             const isBusy = busyName === name
             const isActionable = row.status === 'update-available' && !entry.ignored
-            const source = abbreviateSource(row.source)
+            const rawSource = abbreviateSource(row.source)
+            const derivedSource = isActionable ? `${name}@${latest}` : `${name}@${current}`
+            const source = rawSource === '' || rawSource === name || rawSource === derivedSource ? '' : rawSource
             const noteLines = []
             const detail = typeof row.error === 'string' && row.error !== '' ? row.error : ''
             if (row.status === 'error' || row.status === 'unknown-version') {
@@ -1903,19 +1988,43 @@ window.__ModuleLoader__.load({
                 }, t('update'))
                 : null
 
-            return h('div', { key: name, className: 'dpu-item' }, [
+            return { name, title, current, latest, status, isBusy, isActionable, source, noteLines, versionNode, secondary, primary }
+          }
+
+          const buildItem = (entry) => {
+            const view = entryInfo(entry)
+            return h('div', { key: view.name, className: 'dpu-item' }, [
               h('div', { key: 'main', className: 'dpu-item-main' }, [
-                h('div', { key: 'title', className: 'dpu-item-title', title: title === name ? name : title }, title),
-                source === '' ? null : h('div', { key: 'meta', className: 'dpu-item-meta' }, h('span', { key: 'source', className: 'dpu-item-source', title: source }, source)),
-                noteLines.map((line, index) => h('div', { key: `note-${index}`, className: 'dpu-item-note' }, line)),
+                h('div', { key: 'title', className: 'dpu-item-title', title: view.title === view.name ? view.name : view.title }, view.title),
+                view.source === '' ? null : h('div', { key: 'meta', className: 'dpu-item-meta' }, h('span', { key: 'source', className: 'dpu-item-source', title: view.source }, view.source)),
+                view.noteLines.map((line, index) => h('div', { key: `note-${index}`, className: 'dpu-item-note' }, line)),
               ].filter(Boolean)),
-              versionNode,
-              h('div', { key: 'status', className: 'dpu-item-status' }, badge(t, status)),
+              view.versionNode,
+              h('div', { key: 'status', className: 'dpu-item-status' }, badge(t, view.status)),
               h('div', { key: 'actions', className: 'dpu-item-actions' }, [
-                secondary.length === 0 ? null : h('span', { key: 'secondary', className: 'dpu-item-secondary' }, secondary),
-                primary,
+                view.secondary.length === 0 ? null : h('span', { key: 'secondary', className: 'dpu-item-secondary' }, view.secondary),
+                view.primary,
               ].filter(Boolean)),
             ])
+          }
+
+          const buildCard = (entry) => {
+            const view = entryInfo(entry)
+            return h('div', { key: view.name, className: `dpu-card${view.isActionable ? ' dpu-card-new' : ''}` }, [
+              h('div', { key: 'head', className: 'dpu-card-head' }, [
+                h('div', { key: 'who', className: 'dpu-card-who' }, [
+                  h('div', { key: 'title', className: 'dpu-card-title', title: view.title === view.name ? view.name : view.title }, view.title),
+                  view.source === '' ? null : h('div', { key: 'source', className: 'dpu-card-source', title: view.source }, view.source),
+                ].filter(Boolean)),
+                h('span', { key: 'status', className: 'dpu-card-status' }, badge(t, view.status)),
+              ]),
+              h('div', { key: 'versions', className: 'dpu-card-versions' }, view.versionNode),
+              view.noteLines.length === 0 ? null : h('div', { key: 'notes', className: 'dpu-card-notes' }, view.noteLines.map((line, index) => h('div', { key: `note-${index}` }, line))),
+              h('div', { key: 'actions', className: 'dpu-card-actions' }, [
+                view.secondary.length === 0 ? null : h('span', { key: 'secondary', className: 'dpu-card-secondary' }, view.secondary),
+                view.primary,
+              ].filter(Boolean)),
+            ].filter(Boolean))
           }
 
           const updatesRows = visibleRows.filter((entry) => entry.row.status === 'update-available' && !entry.ignored)
@@ -1963,6 +2072,26 @@ window.__ModuleLoader__.load({
               }, chip.label))),
             ]),
             h('div', { key: 'right', className: 'dpu-toolbar-right' }, [
+              h('div', { key: 'views', className: 'dpu-segment', role: 'group', 'aria-label': t('viewGrid') }, [
+                h('button', {
+                  key: 'grid',
+                  type: 'button',
+                  className: `dpu-segment-btn${viewMode === 'grid' ? ' dpu-segment-btn-on' : ''}`,
+                  title: t('viewGrid'),
+                  'aria-label': t('viewGrid'),
+                  'aria-pressed': viewMode === 'grid' ? 'true' : 'false',
+                  onClick: () => changeView('grid'),
+                }, glyph('grid', 14)),
+                h('button', {
+                  key: 'list',
+                  type: 'button',
+                  className: `dpu-segment-btn${viewMode === 'list' ? ' dpu-segment-btn-on' : ''}`,
+                  title: t('viewList'),
+                  'aria-label': t('viewList'),
+                  'aria-pressed': viewMode === 'list' ? 'true' : 'false',
+                  onClick: () => changeView('list'),
+                }, glyph('list', 14)),
+              ]),
               h('input', {
                 key: 'search',
                 type: 'search',
@@ -1990,26 +2119,36 @@ window.__ModuleLoader__.load({
               }, t('clearFilters'))) : null,
             ]))
           } else if (data !== null) {
+            const renderEntry = viewMode === 'grid' ? buildCard : buildItem
+            const sectionCollapsed = (key, count) => collapsed[key] === undefined
+              ? key === 'others' && updatesRows.length > 0 && count > 0
+              : collapsed[key] === true
+            const buildSection = (key, label, items) => {
+              const isCollapsed = sectionCollapsed(key, items.length)
+              const bodyClass = viewMode === 'grid' ? 'dpu-grid' : 'dpu-rows'
+              return h('div', { key, className: 'dpu-section' }, [
+                h('button', {
+                  key: 'head',
+                  type: 'button',
+                  className: 'dpu-section-head dpu-section-toggle',
+                  'aria-expanded': isCollapsed ? 'false' : 'true',
+                  onClick: () => toggleSection(key),
+                }, [
+                  h('span', { key: 'chevron', className: `dpu-section-chevron${isCollapsed ? '' : ' dpu-section-chevron-open'}` }, glyph('chevron', 12)),
+                  h('span', { key: 'label' }, label),
+                  h('span', { key: 'count', className: 'dpu-section-head-count' }, String(items.length)),
+                ]),
+                isCollapsed ? null : h('div', { key: 'body', className: bodyClass }, items.map(renderEntry)),
+              ].filter(Boolean))
+            }
             const sections = []
             if (filter === 'all' && updatesRows.length > 0) {
-              sections.push(h('div', { key: 'updates', className: 'dpu-section' }, [
-                h('div', { key: 'head', className: 'dpu-section-head' }, [
-                  h('span', { key: 'label' }, t('sectionUpdates')),
-                  h('span', { key: 'count', className: 'dpu-section-head-count' }, String(updatesRows.length)),
-                ]),
-                ...updatesRows.map(buildItem),
-              ]))
+              sections.push(buildSection('updates', t('sectionUpdates'), updatesRows))
               if (othersRows.length > 0) {
-                sections.push(h('div', { key: 'others', className: 'dpu-section' }, [
-                  h('div', { key: 'head', className: 'dpu-section-head' }, [
-                    h('span', { key: 'label' }, t('sectionOthers')),
-                    h('span', { key: 'count', className: 'dpu-section-head-count' }, String(othersRows.length)),
-                  ]),
-                  ...othersRows.map(buildItem),
-                ]))
+                sections.push(buildSection('others', t('sectionOthers'), othersRows))
               }
             } else {
-              sections.push(...visibleRows.map(buildItem))
+              sections.push(h('div', { key: 'flat', className: viewMode === 'grid' ? 'dpu-grid dpu-grid-flat' : 'dpu-rows' }, visibleRows.map(renderEntry)))
             }
             rows.push(h('div', { key: 'list', className: 'dpu-list', 'aria-busy': phase === 'loading' ? 'true' : 'false' }, sections))
           }
