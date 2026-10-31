@@ -8,12 +8,15 @@
  * previous version is installed again (best effort rollback).
  *
  * The browser half (client.js) is a compiled-format Client module; it talks to
- * this half over two same-origin JSON routes registered on the host's webServer
+ * this half over same-origin JSON routes registered on the host's webServer
  * service. Nothing here is exposed outside the local web server.
  */
 
+const VERSION = '0.3.0'
+
 const STATE_PATH = '/dsh-plugin-updater/api/state'
 const UPDATE_PATH = '/dsh-plugin-updater/api/update'
+const PROGRESS_PATH = '/dsh-plugin-updater/api/progress'
 
 const PACKUMENT_TTL_MS = 5 * 60 * 1000
 const FAILURE_TTL_MS = 45 * 1000
@@ -326,6 +329,31 @@ export function apply(ctx) {
   let preferredRegistry = null
   let updateInFlight = false
 
+  // Progress of the update that is running right now. The browser half polls it
+  // so a long pnpm remove/install stays legible instead of one silent spinner.
+  let progress = null
+
+  function beginProgress(name, fromVersion, targetVersion) {
+    progress = {
+      name,
+      fromVersion: typeof fromVersion === 'string' ? fromVersion : null,
+      targetVersion: typeof targetVersion === 'string' ? targetVersion : null,
+      phase: 'checking',
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  function setProgressPhase(phase) {
+    if (progress === null) return
+    progress.phase = phase
+    progress.updatedAt = new Date().toISOString()
+  }
+
+  function clearProgress() {
+    progress = null
+  }
+
   async function registryCandidates(force) {
     if (!force && registryState !== null && registryState.expiresAt > Date.now()) return registryState.value
     const registries = []
@@ -387,6 +415,7 @@ export function apply(ctx) {
     return {
       name: typeof bundle.name === 'string' ? bundle.name : '',
       title: meta !== null && typeof meta.title === 'string' ? meta.title : null,
+      description: meta !== null && typeof meta.description === 'string' ? meta.description : null,
       version: typeof bundle.version === 'string' ? bundle.version : null,
       source: typeof bundle.source === 'string' ? bundle.source : null,
       official: bundle.official === true,
@@ -474,6 +503,7 @@ export function apply(ctx) {
     }
     return {
       ok: true,
+      version: VERSION,
       checkedAt: new Date().toISOString(),
       registry: preferredRegistry === null ? registries.length > 0 ? registries[0] : null : preferredRegistry,
       registries,
@@ -495,13 +525,15 @@ export function apply(ctx) {
     if (classified.kind !== 'npm' || classified.packageName === null) {
       return { ok: false, error: 'unsupported-source', detail: classified.kind }
     }
+    const installedVersion = typeof bundle.version === 'string' ? bundle.version : null
+    beginProgress(packageName, installedVersion, null)
     const registries = await registryCandidates(true)
     const packument = await loadPackument(classified.packageName, registries, true)
     if (!packument.ok) {
       return { ok: false, error: 'registry-unreachable', detail: packument.error }
     }
     const targetVersion = packument.latest
-    const installedVersion = typeof bundle.version === 'string' ? bundle.version : null
+    progress.targetVersion = targetVersion
     const comparison = compareSemver(targetVersion, installedVersion)
     if (comparison === null) {
       return { ok: false, error: 'invalid-version', detail: `installed ${installedVersion === null ? 'unknown' : installedVersion}, latest ${targetVersion}` }
@@ -511,6 +543,7 @@ export function apply(ctx) {
     }
     const saveExact = !isRangedSpec(classified.range)
     const enabled = bundle.enabled !== false
+    setProgressPhase('removing')
     try {
       const removal = await manager.removeBundle(packageName)
       if (removal !== null && typeof removal === 'object' && (removal.application === 'failed' || removal.application === 'cancelled')) {
@@ -519,10 +552,12 @@ export function apply(ctx) {
     } catch (error) {
       return { ok: false, error: 'remove-failed', detail: errorMessage(error), fromVersion: installedVersion, targetVersion }
     }
+    setProgressPhase('installing')
     let installation
     try {
       installation = await manager.installBundle(`${classified.packageName}@${targetVersion}`, { enabled, saveExact })
     } catch (error) {
+      setProgressPhase('verifying')
       const rollback = await rollbackTo(classified.packageName, installedVersion, enabled, saveExact)
       return {
         ok: false,
@@ -535,6 +570,7 @@ export function apply(ctx) {
         rollbackError: rollback.ok ? null : rollback.error,
       }
     }
+    setProgressPhase('verifying')
     const failed = installation === null
       || typeof installation !== 'object'
       || installation.application === 'failed'
@@ -588,6 +624,24 @@ export function apply(ctx) {
     }
   }
 
+  async function handleProgress(request, response) {
+    if (!isSameOrigin(request)) {
+      sendJson(response, 403, { ok: false, error: 'untrusted origin' })
+      return
+    }
+    if (request.method !== 'GET') {
+      response.writeHead(405, { allow: 'GET' })
+      response.end()
+      return
+    }
+    sendJson(response, 200, {
+      ok: true,
+      version: VERSION,
+      running: progress !== null,
+      progress: progress === null ? null : { ...progress },
+    })
+  }
+
   async function handleUpdate(request, response) {
     if (!isSameOrigin(request)) {
       sendJson(response, 403, { ok: false, error: 'untrusted origin' })
@@ -617,8 +671,10 @@ export function apply(ctx) {
     updateInFlight = true
     try {
       const result = await runUpdate(packageName)
+      clearProgress()
       sendJson(response, 200, result)
     } catch (error) {
+      clearProgress()
       sendJson(response, 500, { ok: false, error: 'update-failed', detail: errorMessage(error) })
     } finally {
       updateInFlight = false
@@ -629,6 +685,7 @@ export function apply(ctx) {
   try {
     disposers.push(ctx.webServer.register({ kind: 'exact', path: STATE_PATH, handler: handleState }))
     disposers.push(ctx.webServer.register({ kind: 'exact', path: UPDATE_PATH, handler: handleUpdate }))
+    disposers.push(ctx.webServer.register({ kind: 'exact', path: PROGRESS_PATH, handler: handleProgress }))
   } catch (error) {
     for (const dispose of disposers) {
       try {
