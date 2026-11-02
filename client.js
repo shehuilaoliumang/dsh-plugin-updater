@@ -513,18 +513,23 @@ window.__ModuleLoader__.load({
 .dpu-settings-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 62%, transparent); }
 .dpu-settings-notice { color: var(--dsw-alias-state-success-primary); font-size: 11px; }
 .dpu-settings-error { color: var(--dsw-alias-state-error-primary); font-size: 11px; }
-.dpu-popup { position: fixed; right: 24px; bottom: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 344px; border-radius: var(--dpu-r-xl); padding: 14px 16px; background: linear-gradient(158deg, color-mix(in srgb, var(--dsw-alias-bg-overlay) 92%, transparent), color-mix(in srgb, var(--dsw-alias-bg-layer-2) 76%, transparent)); box-shadow: 0 24px 56px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.14), inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-border-l2) 72%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.2); backdrop-filter: blur(18px) saturate(1.2); color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px; animation: dpu-rise 200ms var(--dpu-ease); }
-.dpu-popup-head { display: flex; align-items: center; gap: 10px; }
-.dpu-popup-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent); color: var(--dsw-alias-state-warn-primary); }
-.dpu-popup-icon-ok { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); color: var(--dsw-alias-state-success-primary); }
-.dpu-popup-title { flex: 1; min-width: 0; font-weight: 600; font-size: 12.5px; }
-.dpu-popup-close { border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font-size: 16px; line-height: 18px; padding: 2px 4px; transition: background 120ms var(--dpu-ease), color 120ms var(--dpu-ease); }
+.dpu-popup { position: fixed; right: 20px; bottom: 20px; z-index: 9999; width: 364px; max-width: calc(100vw - 32px); border-radius: 10px; overflow: hidden; background: linear-gradient(158deg, color-mix(in srgb, var(--dsw-alias-bg-overlay) 94%, transparent), color-mix(in srgb, var(--dsw-alias-bg-layer-2) 82%, transparent)); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34), 0 2px 10px rgba(0, 0, 0, 0.12), inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-border-l2) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.18); backdrop-filter: blur(20px) saturate(1.25); color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px; animation: dpu-rise 220ms var(--dpu-ease); }
+.dpu-popup-main { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 10px 14px; }
+.dpu-popup-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 26px; height: 26px; margin-top: 1px; border-radius: 8px; background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 20%, transparent); color: var(--dsw-alias-state-warn-primary); }
+.dpu-popup-icon-ok { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent); color: var(--dsw-alias-state-success-primary); }
+.dpu-popup-content { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.dpu-popup-title { font-weight: 600; font-size: 12.5px; line-height: 18px; letter-spacing: -0.005em; }
+.dpu-popup-body { color: var(--dsw-alias-label-secondary); font-size: 11.5px; line-height: 17px; }
+.dpu-popup-close { flex: 0 0 auto; width: 22px; height: 22px; margin: -2px -2px 0 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 15px; line-height: 22px; text-align: center; cursor: pointer; transition: background 120ms var(--dpu-ease), color 120ms var(--dpu-ease); }
 .dpu-popup-close:hover { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
-.dpu-popup-body { color: var(--dsw-alias-label-secondary); padding-left: 40px; }
-.dpu-popup-countdown { display: flex; align-items: center; gap: 8px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
-.dpu-popup-bar { height: 4px; border-radius: 999px; background: color-mix(in srgb, var(--dsw-alias-border-l2) 70%, transparent); overflow: hidden; }
-.dpu-popup-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--dsw-alias-brand-primary), color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, #fff)); transition: width 220ms linear; }
-.dpu-popup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.dpu-popup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 3px; }
+.dpu-popup-action { border: 0; border-radius: 6px; padding: 3px 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 11.5px; line-height: 16px; cursor: pointer; transition: background 120ms var(--dpu-ease), color 120ms var(--dpu-ease); }
+.dpu-popup-action:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 70%, transparent); color: var(--dsw-alias-label-primary); }
+.dpu-popup-action:disabled { opacity: 0.45; cursor: default; }
+.dpu-popup-action-primary { color: var(--dsw-alias-brand-primary); font-weight: 600; }
+.dpu-popup-action-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 12%, transparent); color: var(--dsw-alias-brand-primary); }
+.dpu-popup-progress { height: 2px; background: color-mix(in srgb, var(--dsw-alias-border-l2) 40%, transparent); }
+.dpu-popup-progress-fill { height: 100%; background: linear-gradient(90deg, var(--dsw-alias-brand-primary), color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, #fff)); transition: width 220ms linear; }
 @keyframes dpu-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 .dpu-panel { display: flex; flex-direction: column; height: 100%; overflow-y: auto; box-sizing: border-box; padding: 24px 28px 40px; background: radial-gradient(1100px 480px at 8% -10%, color-mix(in srgb, var(--dsw-alias-brand-primary) 7%, transparent), transparent 60%), radial-gradient(820px 380px at 100% 0%, color-mix(in srgb, var(--dsw-alias-state-success-primary) 5%, transparent), transparent 58%); }
 .dpu-panel > .dpu-root { width: 100%; max-width: 980px; margin: 0 auto; }
@@ -1305,14 +1310,66 @@ window.__ModuleLoader__.load({
             : format(t('popupUpdated'), { n: state.updated })
         }
 
-        const done = state.phase === 'done'
-        const children = [
-          h('div', { key: 'head', className: 'dpu-popup-head' }, [
-            h('span', {
-              key: 'icon',
-              className: `dpu-popup-icon${done && state.failed === 0 ? ' dpu-popup-icon-ok' : ''}`,
-            }, glyph(done && state.failed === 0 ? 'check' : 'sync', 16)),
-            h('div', { key: 'title', className: 'dpu-popup-title' }, title),
+        const isDone = state.phase === 'done'
+        const isOk = isDone && state.failed === 0
+        const iconNode = state.phase === 'working'
+          ? h('span', { key: 'spinner', className: 'dpu-spinner' })
+          : glyph(isDone ? (isOk ? 'check' : 'alert') : 'sync', 15)
+
+        const actions = []
+        if (state.phase === 'idle') {
+          actions.push(h('button', {
+            key: 'view',
+            type: 'button',
+            className: 'dpu-popup-action',
+            onClick: () => {
+              openPluginsPage()
+              hidePopup()
+            },
+          }, t('popupView')))
+          actions.push(h('button', {
+            key: 'all',
+            type: 'button',
+            className: 'dpu-popup-action dpu-popup-action-primary',
+            disabled: busy,
+            onClick: updateAll,
+          }, format(t('popupUpdateAll'), { n: state.count })))
+        } else if (isDone) {
+          actions.push(h('button', {
+            key: 'view',
+            type: 'button',
+            className: 'dpu-popup-action',
+            onClick: () => {
+              openPluginsPage()
+              hidePopup()
+            },
+          }, t('popupView')))
+        }
+
+        const width = state.phase === 'working'
+          ? (state.total > 0 ? Math.round((state.done / state.total) * 100) : 0)
+          : percent
+
+        return h('div', {
+          className: 'dpu-popup',
+          role: 'status',
+          'aria-live': 'polite',
+          'aria-atomic': 'true',
+          title: state.phase === 'working' ? '' : format(t('popupSeconds'), { n: state.seconds }),
+          onMouseEnter: () => {
+            if (state.phase !== 'working') stopPopupTimer()
+          },
+          onMouseLeave: () => {
+            if (state.phase !== 'working' && popupStore.visible) startPopupTimer()
+          },
+        }, [
+          h('div', { key: 'main', className: 'dpu-popup-main' }, [
+            h('span', { key: 'icon', className: `dpu-popup-icon${isOk ? ' dpu-popup-icon-ok' : ''}` }, iconNode),
+            h('div', { key: 'content', className: 'dpu-popup-content' }, [
+              h('div', { key: 'title', className: 'dpu-popup-title' }, title),
+              state.phase === 'idle' ? h('div', { key: 'body', className: 'dpu-popup-body' }, t('popupBody')) : null,
+              actions.length === 0 ? null : h('div', { key: 'actions', className: 'dpu-popup-actions' }, actions),
+            ].filter(Boolean)),
             h('button', {
               key: 'close',
               type: 'button',
@@ -1322,71 +1379,12 @@ window.__ModuleLoader__.load({
               onClick: hidePopup,
             }, '×'),
           ]),
-        ]
-        if (state.phase === 'idle') {
-          children.push(h('div', { key: 'body', className: 'dpu-popup-body' }, t('popupBody')))
-        }
-        if (state.phase === 'working') {
-          children.push(h('div', { key: 'bar', className: 'dpu-popup-bar' }, [
-            h('div', {
-              key: 'fill',
-              className: 'dpu-popup-bar-fill',
-              style: { width: state.total > 0 ? `${Math.round((state.done / state.total) * 100)}%` : '0%' },
-            }),
-          ]))
-        } else {
-          children.push(h('div', { key: 'countdown', className: 'dpu-popup-countdown' }, [
-            h('span', { key: 'text' }, format(t('popupSeconds'), { n: state.seconds })),
-            h('div', { key: 'bar', className: 'dpu-popup-bar', style: { flex: '1' } }, [
-              h('div', { key: 'fill', className: 'dpu-popup-bar-fill', style: { width: `${percent}%` } }),
-            ]),
-          ]))
-        }
-
-        const actions = []
-        if (state.phase === 'idle') {
-          actions.push(h('button', {
-            key: 'view',
-            type: 'button',
-            className: 'dpu-btn dpu-btn-ghost',
-            onClick: () => {
-              openPluginsPage()
-              hidePopup()
-            },
-          }, t('popupView')))
-          actions.push(h('button', {
-            key: 'close',
-            type: 'button',
-            className: 'dpu-btn dpu-btn-ghost',
-            onClick: hidePopup,
-          }, t('popupClose')))
-          actions.push(h('button', {
-            key: 'all',
-            type: 'button',
-            className: 'dpu-btn dpu-btn-primary',
-            disabled: busy,
-            onClick: updateAll,
-          }, format(t('popupUpdateAll'), { n: state.count })))
-        } else if (state.phase === 'done') {
-          actions.push(h('button', {
-            key: 'view',
-            type: 'button',
-            className: 'dpu-btn dpu-btn-ghost',
-            onClick: () => {
-              openPluginsPage()
-              hidePopup()
-            },
-          }, t('popupView')))
-          actions.push(h('button', {
-            key: 'close',
-            type: 'button',
-            className: 'dpu-btn dpu-btn-ghost',
-            onClick: hidePopup,
-          }, t('popupClose')))
-        }
-        if (actions.length > 0) children.push(h('div', { key: 'actions', className: 'dpu-popup-actions' }, actions))
-
-        return h('div', { className: 'dpu-popup', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' }, children)
+          h('div', { key: 'progress', className: 'dpu-popup-progress' }, h('div', {
+            key: 'fill',
+            className: 'dpu-popup-progress-fill',
+            style: { width: `${width}%` },
+          })),
+        ])
       }
     }
 
