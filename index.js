@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const VERSION = '0.4.0'
+const VERSION = '0.4.1'
 
 const STATE_PATH = '/dsh-plugin-updater/api/state'
 const UPDATE_PATH = '/dsh-plugin-updater/api/update'
@@ -60,6 +60,10 @@ const STATUS_RANK = {
 }
 
 const SKIPPED_STATUSES = new Set(['local', 'git', 'tarball', 'unknown-source', 'shipped'])
+
+// Management refusals that only a process restart can clear: the package is still
+// loaded by a live fiber, so the desktop shell will not remove it right now.
+const RESTART_REQUIRED_CODES = new Set(['bundle-in-use', 'stop-profile'])
 
 export const name = 'dsh-plugin-updater'
 export const inject = ['webServer', 'pluginManager']
@@ -320,6 +324,13 @@ function describeChange(result) {
   return parts.length === 0 ? 'unknown result' : parts.join(' ')
 }
 
+function failureCodeOf(result) {
+  if (result === null || typeof result !== 'object') return null
+  if (result.error !== null && typeof result.error === 'object' && typeof result.error.code === 'string') return result.error.code
+  if (typeof result.refusalCode === 'string') return result.refusalCode
+  return null
+}
+
 function pendingBuildsOf(result) {
   if (result === null || typeof result !== 'object') return null
   const pending = Array.isArray(result.pendingBuilds) ? result.pendingBuilds : []
@@ -474,8 +485,21 @@ export function apply(ctx) {
     const updated = []
     const failed = []
     const total = names.length
+    let stopped = null
     for (let index = 0; index < total; index += 1) {
       const name = names[index]
+      if (stopped !== null) {
+        failed.push({
+          name,
+          error: 'skipped-after-restart',
+          detail: `stopped after ${stopped.name} needs a restart`,
+          rolledBack: false,
+          needsRestart: true,
+          selectionMissing: false,
+          refusalCode: null,
+        })
+        continue
+      }
       let result
       try {
         result = await runUpdate(name, { kind, index, total })
@@ -491,15 +515,20 @@ export function apply(ctx) {
           verifiedVersion: result.verifiedVersion === undefined ? null : result.verifiedVersion,
         })
       } else {
-        failed.push({
+        const entry = {
           name,
           error: result !== null && typeof result.error === 'string' ? result.error : 'update-failed',
           detail: result !== null && typeof result.detail === 'string' ? result.detail : null,
           rolledBack: result !== null && result.rolledBack === true,
-        })
+          needsRestart: result !== null && result.needsRestart === true,
+          selectionMissing: result !== null && result.selectionMissing === true,
+          refusalCode: result !== null && typeof result.refusalCode === 'string' ? result.refusalCode : null,
+        }
+        failed.push(entry)
+        if (entry.needsRestart) stopped = { name, reason: 'restart-required' }
       }
     }
-    return { updated, failed }
+    return { updated, failed, stopped }
   }
 
   async function runAutoUpdate(kind) {
@@ -507,7 +536,7 @@ export function apply(ctx) {
     const enabled = kind === 'scheduled' ? settings.autoUpdate.scheduled.enabled : settings.autoUpdate.pageOpen
     if (!enabled && kind !== 'enable') return { ok: false, error: 'disabled' }
     updateInFlight = true
-    const record = { kind, startedAt: new Date().toISOString(), finishedAt: null, checked: 0, updated: [], failed: [] }
+    const record = { kind, startedAt: new Date().toISOString(), finishedAt: null, checked: 0, updated: [], failed: [], stopped: null }
     lastAutoRun = record
     try {
       const state = await buildState(true)
@@ -517,9 +546,10 @@ export function apply(ctx) {
         const result = await updateMany(names, 'auto')
         record.updated = result.updated
         record.failed = result.failed
+        record.stopped = result.stopped === undefined ? null : result.stopped
         packumentCache.clear()
       }
-      return { ok: true, kind, checked: record.checked, updated: record.updated, failed: record.failed }
+      return { ok: true, kind, checked: record.checked, updated: record.updated, failed: record.failed, stopped: record.stopped }
     } catch (error) {
       record.error = errorMessage(error)
       return { ok: false, error: record.error }
@@ -627,12 +657,12 @@ export function apply(ctx) {
         names = updatableNamesOf(state)
       }
       if (names.length === 0) {
-        sendJson(response, 200, { ok: true, version: VERSION, total: 0, updated: [], failed: [] })
+        sendJson(response, 200, { ok: true, version: VERSION, total: 0, updated: [], failed: [], stopped: null })
         return
       }
       const result = await updateMany(names, 'batch')
       packumentCache.clear()
-      sendJson(response, 200, { ok: true, version: VERSION, total: names.length, updated: result.updated, failed: result.failed })
+      sendJson(response, 200, { ok: true, version: VERSION, total: names.length, updated: result.updated, failed: result.failed, stopped: result.stopped === undefined ? null : result.stopped })
     } catch (error) {
       sendJson(response, 500, { ok: false, error: 'update-failed', detail: errorMessage(error) })
     } finally {
@@ -707,6 +737,7 @@ export function apply(ctx) {
       source: typeof bundle.source === 'string' ? bundle.source : null,
       official: bundle.official === true,
       enabled: bundle.enabled !== false,
+      selectionMissing: bundle.enabled === false,
       kind: classified.kind,
       packageName: classified.packageName,
       range: classified.range,
@@ -737,6 +768,26 @@ export function apply(ctx) {
       return found !== undefined && found !== null && typeof found.version === 'string' ? found.version : null
     } catch {
       return null
+    }
+  }
+
+  async function selectionOf(packageName) {
+    try {
+      const bundles = await manager.listBundles()
+      const found = (Array.isArray(bundles) ? bundles : []).find((bundle) => bundle !== null && typeof bundle === 'object' && bundle.name === packageName)
+      if (found === undefined || found === null) return null
+      return found.enabled !== false
+    } catch {
+      return null
+    }
+  }
+
+  async function restoreSelection(packageName) {
+    try {
+      await manager.setBundleEnabled(packageName, true)
+      return true
+    } catch {
+      return false
     }
   }
 
@@ -787,6 +838,7 @@ export function apply(ctx) {
       upToDate: rows.filter((row) => row.status === 'up-to-date').length,
       skipped: rows.filter((row) => SKIPPED_STATUSES.has(row.status)).length,
       failed: rows.filter((row) => row.status === 'error' || row.status === 'unknown-version').length,
+      missingSelection: rows.filter((row) => row.selectionMissing === true).length,
     }
     return {
       ok: true,
@@ -832,15 +884,34 @@ export function apply(ctx) {
       return { ok: false, error: 'no-update', detail: `installed ${installedVersion === null ? 'unknown' : installedVersion}, latest ${targetVersion}` }
     }
     const saveExact = !isRangedSpec(classified.range)
-    const enabled = bundle.enabled !== false
+    const selectionMissingAtStart = bundle.enabled === false
+    // A bundle whose profile selection row was lost still runs in-process; after a
+    // restart it no longer does. Installing it as selected restores the row.
+    const enabled = selectionMissingAtStart ? true : bundle.enabled !== false
     setProgressPhase('removing')
+    let removal
     try {
-      const removal = await manager.removeBundle(packageName)
-      if (removal !== null && typeof removal === 'object' && (removal.application === 'failed' || removal.application === 'cancelled')) {
-        return { ok: false, error: 'remove-failed', detail: describeChange(removal), fromVersion: installedVersion, targetVersion }
-      }
+      removal = await manager.removeBundle(packageName)
     } catch (error) {
-      return { ok: false, error: 'remove-failed', detail: errorMessage(error), fromVersion: installedVersion, targetVersion }
+      const selectionMissing = selectionMissingAtStart || (await selectionOf(packageName)) === false
+      return { ok: false, error: 'remove-failed', detail: errorMessage(error), fromVersion: installedVersion, targetVersion, selectionMissing }
+    }
+    if (removal !== null && typeof removal === 'object' && (removal.application === 'failed' || removal.application === 'cancelled')) {
+      const refusalCode = failureCodeOf(removal)
+      const needsRestart = RESTART_REQUIRED_CODES.has(refusalCode)
+      const selectionMissing = selectionMissingAtStart || (await selectionOf(packageName)) === false
+      if (selectionMissing) await restoreSelection(packageName)
+      return {
+        ok: false,
+        error: needsRestart ? 'restart-required' : 'remove-failed',
+        refusalCode,
+        needsRestart,
+        selectionMissing,
+        selectionRestored: selectionMissing,
+        detail: describeChange(removal),
+        fromVersion: installedVersion,
+        targetVersion,
+      }
     }
     setProgressPhase('installing')
     let installation
@@ -858,6 +929,7 @@ export function apply(ctx) {
         rolledBack: rollback.ok,
         rollbackVersion: rollback.ok ? rollback.version : null,
         rollbackError: rollback.ok ? null : rollback.error,
+        selectionMissing: selectionMissingAtStart,
       }
     }
     setProgressPhase('verifying')
@@ -883,6 +955,7 @@ export function apply(ctx) {
         rolledBack: rollback.ok,
         rollbackVersion: rollback.ok ? rollback.version : null,
         rollbackError: rollback.ok ? null : rollback.error,
+        selectionMissing: selectionMissingAtStart,
       }
     }
     return {

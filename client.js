@@ -4,7 +4,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
 
-    const VERSION = '0.4.0'
+    const VERSION = '0.4.1'
     const NS = 'dsh-plugin-updater'
     const STATE_URL = '/dsh-plugin-updater/api/state'
     const UPDATE_URL = '/dsh-plugin-updater/api/update'
@@ -25,6 +25,7 @@ window.__ModuleLoader__.load({
       heroCurrent: '全部插件都已是最新版本',
       heroFailed: '有 {n} 个插件检查失败',
       heroBody: '共 {total} 个已安装插件',
+      heroMissing: '{n} 个启动项缺失',
       sectionUpdates: '可更新',
       sectionOthers: '其他插件',
       settingsToggle: '更新设置',
@@ -61,6 +62,7 @@ window.__ModuleLoader__.load({
       batchWaiting: '正在批量更新（{done}/{total}）…',
       batchSummaryOk: '全部 {n} 个插件已更新',
       batchSummaryPartial: '已更新 {ok} 个，失败 {failed} 个：{names}',
+      batchStopped: '「{name}」需要重启 DSH 后才能更新，后续更新已暂停；重启后再次点击「全部更新」即可继续。',
       update: '更新',
       updating: '正在更新…',
       ignoreVersion: '忽略此版本',
@@ -121,6 +123,10 @@ window.__ModuleLoader__.load({
       err_invalid_name: '插件名无效',
       err_invalid_body: '请求内容无效',
       err_untrusted_origin: '请求来源不可信',
+      err_restart_required: '当前进程仍在使用这些插件，无法卸载；请重启 DSH 后再更新',
+      err_skipped_after_restart: '前面的插件需要重启，已暂停后续更新',
+      missingSelectionHint: '启动项缺失，重启 DSH 后再更新即可恢复',
+      restartHint: '桌面端不允许卸载正在运行的插件：重启 DSH 后可正常更新。',
       versionFooter: '更新检查 v{client}',
       hostVersionFooter: 'Host v{host}',
       versionMismatch: '浏览器端 v{client} 与 Host 端 v{host} 不一致：请重启 DSH 以加载新代码。',
@@ -185,6 +191,7 @@ window.__ModuleLoader__.load({
       heroCurrent: 'All plugins are up to date',
       heroFailed: '{n} plugins need attention',
       heroBody: '{total} installed plugins',
+      heroMissing: '{n} startup entries missing',
       sectionUpdates: 'Updates available',
       sectionOthers: 'Other plugins',
       settingsToggle: 'Update settings',
@@ -221,6 +228,7 @@ window.__ModuleLoader__.load({
       batchWaiting: 'Updating {done}/{total}…',
       batchSummaryOk: 'Updated all {n} plugins',
       batchSummaryPartial: 'Updated {ok}, failed {failed}: {names}',
+      batchStopped: '"{name}" needs a DSH restart before it can update, so later plugins were paused. Restart DSH and run the update again.',
       update: 'Update',
       updating: 'Updating…',
       ignoreVersion: 'Ignore this version',
@@ -281,6 +289,10 @@ window.__ModuleLoader__.load({
       err_invalid_name: 'Invalid plugin name',
       err_invalid_body: 'Invalid request body',
       err_untrusted_origin: 'Untrusted request origin',
+      err_restart_required: 'These plugins are still loaded by this process, so they cannot be removed; restart DSH and retry',
+      err_skipped_after_restart: 'Paused after an earlier plugin required a restart',
+      missingSelectionHint: 'Startup entry missing; updating again after a DSH restart restores it',
+      restartHint: 'The desktop app will not remove a plugin that is still running: restart DSH, then update again.',
       versionFooter: 'Update check v{client}',
       hostVersionFooter: 'Host v{host}',
       versionMismatch: 'Browser half v{client} does not match host half v{host}: restart DSH to load the new code.',
@@ -610,8 +622,10 @@ window.__ModuleLoader__.load({
       const codeKey = `err_${payload.error.replace(/-/g, '_')}`
       const label = labelOf(t, codeKey)
       const detail = typeof payload.detail === 'string' ? payload.detail.trim() : ''
-      if (label !== null) return detail === '' ? label : `${label}：${detail}`
-      return detail === '' ? payload.error : `${payload.error}：${detail}`
+      let text = label !== null ? (detail === '' ? label : `${label}：${detail}`) : (detail === '' ? payload.error : `${payload.error}：${detail}`)
+      if (payload.selectionMissing === true) text = `${text} ${t('missingSelectionHint')}`
+      else if (payload.refusalCode === 'bundle-in-use' && payload.error !== 'restart-required') text = `${text} ${t('restartHint')}`
+      return text
     }
 
     function skipTextOf(t, status) {
@@ -1714,14 +1728,14 @@ window.__ModuleLoader__.load({
               setNotice({ kind: 'ok', lines: [format(t('batchSummaryOk'), { n: updated.length })] })
             } else {
               const names = failed.map((entry) => (entry !== null && typeof entry === 'object' && typeof entry.name === 'string' ? entry.name : String(entry)))
-              setNotice({
-                kind: 'error',
-                lines: [format(t('batchSummaryPartial'), {
-                  ok: updated.length,
-                  failed: failed.length,
-                  names: names.join(', '),
-                })],
-              })
+              const lines = [format(t('batchSummaryPartial'), {
+                ok: updated.length,
+                failed: failed.length,
+                names: names.join(', '),
+              })]
+              const stopped = payload.stopped !== null && typeof payload.stopped === 'object' && typeof payload.stopped.name === 'string' ? payload.stopped : null
+              if (stopped !== null) lines.push(format(t('batchStopped'), { name: stopped.name }))
+              setNotice({ kind: 'error', lines })
             }
           } else {
             setNotice({ kind: 'error', lines: [t('updateNoDetail')] })
@@ -1928,6 +1942,7 @@ window.__ModuleLoader__.load({
               const hint = skipTextOf(t, row.status)
               if (hint !== null && hint !== '') noteLines.push(hint)
             }
+            if (row.selectionMissing === true) noteLines.push(t('missingSelectionHint'))
 
             const versionNode = isActionable
               ? h('span', { key: 'versions', className: 'dpu-versions dpu-versions-new' }, [
@@ -2050,6 +2065,9 @@ window.__ModuleLoader__.load({
             const checkedStamp = typeof data.checkedAt === 'string' && data.checkedAt !== ''
               ? ` · ${formatTime(data.checkedAt)}`
               : ''
+            const heroMissing = typeof counts.missingSelection === 'number' && counts.missingSelection > 0
+              ? ` · ${format(t('heroMissing'), { n: counts.missingSelection })}`
+              : ''
             rows.push(h('div', {
               key: 'hero',
               className: `dpu-hero${heroMode === 'warn' ? ' dpu-hero-warn' : heroMode === 'ok' ? ' dpu-hero-ok' : ''}`,
@@ -2057,7 +2075,7 @@ window.__ModuleLoader__.load({
               h('span', { key: 'icon', className: 'dpu-hero-icon' }, glyph(heroMode === 'updates' ? 'sync' : heroMode === 'warn' ? 'alert' : 'check', 20)),
               h('div', { key: 'text', className: 'dpu-hero-text' }, [
                 h('div', { key: 'title', className: 'dpu-hero-title' }, heroTitle),
-                h('div', { key: 'body', className: 'dpu-hero-body' }, format(t('heroBody'), { total: counts.total }) + checkedStamp),
+                h('div', { key: 'body', className: 'dpu-hero-body' }, format(t('heroBody'), { total: counts.total }) + heroMissing + checkedStamp),
               ]),
               heroMode === 'updates'
                 ? h('button', {
