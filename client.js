@@ -4,7 +4,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
 
-    const VERSION = '0.4.1'
+    const VERSION = '0.4.2'
     const NS = 'dsh-plugin-updater'
     const STATE_URL = '/dsh-plugin-updater/api/state'
     const UPDATE_URL = '/dsh-plugin-updater/api/update'
@@ -63,6 +63,7 @@ window.__ModuleLoader__.load({
       batchSummaryOk: '全部 {n} 个插件已更新',
       batchSummaryPartial: '已更新 {ok} 个，失败 {failed} 个：{names}',
       batchStopped: '「{name}」需要重启 DSH 后才能更新，后续更新已暂停；重启后再次点击「全部更新」即可继续。',
+      batchStoppedError: '「{name}」更新失败（{reason}），后续更新已暂停；修好原因后重新检查即可继续。',
       update: '更新',
       updating: '正在更新…',
       ignoreVersion: '忽略此版本',
@@ -93,6 +94,10 @@ window.__ModuleLoader__.load({
       detailDone: '已更新到 {version}',
       detailDoneRestart: '已更新，重启 DSH 后生效',
       detailFailed: '更新失败：{detail}',
+      failureProfileLockfileBroken: '更新被 profile 的 pnpm 锁文件阻断（锁文件损坏）。修复锁文件后即可继续：在该 profile 目录执行 pnpm install --fix-lockfile。',
+      failureReleasePolicy: 'pnpm 的新版本等待期拦截了这次更新；稍后重试即可（pnpm 会自动放行并重试）。',
+      reasonProfileLockfileBroken: '锁文件损坏',
+      reasonReleasePolicy: '新版本等待期',
       detailRetry: '重试',
       detailHint: '点击立即更新，失败会自动回滚',
       progressTitle: '正在更新 {name}',
@@ -125,6 +130,7 @@ window.__ModuleLoader__.load({
       err_untrusted_origin: '请求来源不可信',
       err_restart_required: '当前进程仍在使用这些插件，无法卸载；请重启 DSH 后再更新',
       err_skipped_after_restart: '前面的插件需要重启，已暂停后续更新',
+      err_skipped_after_error: '前面的插件更新失败，已暂停后续更新',
       missingSelectionHint: '启动项缺失，重启 DSH 后再更新即可恢复',
       restartHint: '桌面端不允许卸载正在运行的插件：重启 DSH 后可正常更新。',
       versionFooter: '更新检查 v{client}',
@@ -229,6 +235,7 @@ window.__ModuleLoader__.load({
       batchSummaryOk: 'Updated all {n} plugins',
       batchSummaryPartial: 'Updated {ok}, failed {failed}: {names}',
       batchStopped: '"{name}" needs a DSH restart before it can update, so later plugins were paused. Restart DSH and run the update again.',
+      batchStoppedError: 'Updating "{name}" failed ({reason}), so later plugins were paused. Fix the cause and check again.',
       update: 'Update',
       updating: 'Updating…',
       ignoreVersion: 'Ignore this version',
@@ -259,6 +266,10 @@ window.__ModuleLoader__.load({
       detailDone: 'Updated to {version}',
       detailDoneRestart: 'Updated — restart DSH to apply',
       detailFailed: 'Update failed: {detail}',
+      failureProfileLockfileBroken: 'Updates are blocked by a broken pnpm lockfile in the profile. Repair it first by running pnpm install --fix-lockfile in the profile directory.',
+      failureReleasePolicy: 'pnpm held this release back until it is old enough to install; try again later — pnpm allows it and retries automatically.',
+      reasonProfileLockfileBroken: 'broken lockfile',
+      reasonReleasePolicy: 'release age wait',
       detailRetry: 'Retry',
       detailHint: 'Click to update now; restores the old version if it fails',
       progressTitle: 'Updating {name}',
@@ -291,6 +302,7 @@ window.__ModuleLoader__.load({
       err_untrusted_origin: 'Untrusted request origin',
       err_restart_required: 'These plugins are still loaded by this process, so they cannot be removed; restart DSH and retry',
       err_skipped_after_restart: 'Paused after an earlier plugin required a restart',
+      err_skipped_after_error: 'Paused after an earlier plugin failed',
       missingSelectionHint: 'Startup entry missing; updating again after a DSH restart restores it',
       restartHint: 'The desktop app will not remove a plugin that is still running: restart DSH, then update again.',
       versionFooter: 'Update check v{client}',
@@ -626,6 +638,21 @@ window.__ModuleLoader__.load({
       if (payload.selectionMissing === true) text = `${text} ${t('missingSelectionHint')}`
       else if (payload.refusalCode === 'bundle-in-use' && payload.error !== 'restart-required') text = `${text} ${t('restartHint')}`
       return text
+    }
+
+    // The Host names the profile-level reason behind a failed pnpm step; the raw
+    // diagnostic stays in detail, the line under it says what to do about it.
+    function failureHintOf(t, payload) {
+      if (payload === null || typeof payload !== 'object' || typeof payload.failureClass !== 'string') return null
+      if (payload.failureClass === 'profile-lockfile-broken') return t('failureProfileLockfileBroken')
+      if (payload.failureClass === 'release-policy') return t('failureReleasePolicy')
+      return null
+    }
+
+    function stopReasonTextOf(t, reason) {
+      if (reason === 'profile-lockfile-broken') return t('reasonProfileLockfileBroken')
+      if (reason === 'release-policy') return t('reasonReleasePolicy')
+      return typeof reason === 'string' && reason !== '' ? reason : t('updateNoDetail')
     }
 
     function skipTextOf(t, status) {
@@ -998,7 +1025,9 @@ window.__ModuleLoader__.load({
                 return
               }
               setPhase('error')
-              setMessage(format(t('detailFailed'), { detail: errorTextOf(t, payload) }))
+              const failureDetail = errorTextOf(t, payload)
+              const failureHint = failureHintOf(t, payload)
+              setMessage(format(t('detailFailed'), { detail: failureHint === null ? failureDetail : `${failureDetail} ${failureHint}` }))
             })
             .catch((error) => {
               stop()
@@ -1658,6 +1687,8 @@ window.__ModuleLoader__.load({
         const failureLines = (name, payload) => {
           const lines = [format(t('updateFailed'), { name, detail: errorTextOf(t, payload) })]
           if (payload !== null && typeof payload === 'object') {
+            const failureHint = failureHintOf(t, payload)
+            if (failureHint !== null) lines.push(failureHint)
             if (Array.isArray(payload.pendingBuilds) && payload.pendingBuilds.length > 0) {
               lines.push(format(t('updatePendingBuilds'), { names: payload.pendingBuilds.join(', ') }))
             }
@@ -1734,7 +1765,12 @@ window.__ModuleLoader__.load({
                 names: names.join(', '),
               })]
               const stopped = payload.stopped !== null && typeof payload.stopped === 'object' && typeof payload.stopped.name === 'string' ? payload.stopped : null
-              if (stopped !== null) lines.push(format(t('batchStopped'), { name: stopped.name }))
+              if (stopped !== null) {
+                const reason = typeof stopped.reason === 'string' ? stopped.reason : ''
+                lines.push(reason === '' || reason === 'restart-required'
+                  ? format(t('batchStopped'), { name: stopped.name })
+                  : format(t('batchStoppedError'), { name: stopped.name, reason: stopReasonTextOf(t, reason) }))
+              }
               setNotice({ kind: 'error', lines })
             }
           } else {

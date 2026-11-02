@@ -23,15 +23,18 @@
   - **打开页面时自动更新**：DSH Web UI 每次打开时检查一次，并把所有可更新插件自动更新掉，完成后用限时提醒汇总结果。
   - **定时后台更新**：DSH 运行期间按固定间隔检查并更新，间隔可设 30 分钟～30 天；开启后约 1.5 秒会先执行一次。
   - 自动更新同样只处理 npm 第三方插件，并复用“失败自动回滚”的更新流程。
-- 版本自证：页脚显示「更新检查 v0.4.1」「Host v0.4.1」与最近检查时间；浏览器端与 Host 端版本不一致时会提示重启 DSH，便于确认当前页面实际跑的是哪一版。
+- 版本自证：页脚显示「更新检查 v0.4.2」「Host v0.4.2」与最近检查时间；浏览器端与 Host 端版本不一致时会提示重启 DSH，便于确认当前页面实际跑的是哪一版。
 - 需要重启时给出提示；安装日志写入 profile 的插件管理器日志。
 - 更新被拒绝时区分原因：桌面端仍在使用某个插件（`bundle-in-use`），会提示「重启 DSH 后再更新」；如果该插件的 profile 启动项已经丢失，会显示「启动项缺失，重启后再更新即可恢复」。批量更新遇到需要重启的情况会立即暂停，不再继续尝试后续插件。
+- pnpm 层失败按原因归类：profile 的锁文件损坏（`Broken lockfile` / `ERR_PNPM_LOCKFILE_MISSING_DEPENDENCY`）、新版本等待期拦截（`ERR_PNPM_RESOLUTION_POLICY_VIOLATIONS_UNHANDLED` 等）会在错误行下给出可执行的修复提示；锁文件损坏属于全局性故障，批量更新在第一个失败处立即暂停，不再逐个插件重复失败的卸载/重载。
 
 ## 常见问题：更新失败 / 需要重启
 
 - **提示需要重启 DSH**：官方桌面端不允许卸载「正在被当前进程加载」的插件，Host 半只能给出提示；重启 DSH 后再点一次更新即可。
 - **插件显示“启动项缺失”**：早期版本的桌面插件管理器在卸载失败后可能已经从 profile 的 `dsh.profile.bundles` 里写掉了启动行（依赖仍在）。重启 DSH 后执行一次更新，安装成功会写回启动行；若仍缺失，可在「插件」页手动重新启用该插件。
 - **批量更新中途暂停**：第一个需要重启的插件之后的插件会被标记为“暂停”，重启后重新批量更新即可继续。
+- **所有插件一起更新失败，日志里是 pnpm 的 internal error**：通常是 profile 的 `pnpm-lock.yaml` 损坏（某个依赖只有 importer 条目、缺少 packages/snapshots 条目，例如 `Broken lockfile: no entry for <pkg>@<version>`）。修复命令：在 profile 目录执行 `pnpm install --lockfile-only --fix-lockfile`，完成后重新检查即可；pnpm 会同时把该版本写进 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude`。
+- **目标版本刚发布就更新失败**：pnpm 11 默认有 24 小时的新版本等待期。CLI 的 `add` 路径会自动把该版本加入 `minimumReleaseAgeExclude` 并放行；若日志里出现 `ERR_PNPM_RESOLUTION_POLICY_VIOLATIONS_UNHANDLED`，按上一条先修锁文件，再重试。
 - **pnpm 安装长时间无输出**：插件管理器有 10 分钟空闲超时（`idleTimeoutMs`），超时会被终止并回滚旧版本；可重试或检查网络/registry 后重试。
 
 ## 更新规则
@@ -45,10 +48,10 @@
 
 - Host 半（`index.js`）注册五条同源 JSON 路由：
   - `GET /dsh-plugin-updater/api/state[?force=1]`：聚合 `pluginManager.listBundles()` 的已装插件，向 registry 查询 packument 的 `dist-tags.latest`，返回每个插件的状态、自身版本、自动更新设置、下次定时时间与上次自动执行结果。
-  - `POST /dsh-plugin-updater/api/update`：body `{ "name": "<package>" }`，执行单个更新并返回结果（错误带稳定的 code 与 detail）。
+  - `POST /dsh-plugin-updater/api/update`：body `{ "name": "<package>" }`，执行单个更新并返回结果（错误带稳定的 code、detail 与 `failureClass`；`failureClass` 把 pnpm 的锁文件损坏 / 等待期拦截翻译成前端可执行的修复提示）。
   - `GET /dsh-plugin-updater/api/progress`：返回当前正在执行的更新所处阶段（checking / removing / installing / verifying）、序号与总数，供前端显示进度。
   - `GET|POST /dsh-plugin-updater/api/settings`：读取/合并保存自动更新设置（`autoUpdate.pageOpen`、`autoUpdate.scheduled.{enabled,intervalMinutes}` 与忽略表 `ignored`），设置写入 `~/.dsh/plugin-updater/settings.json`，与 profile 配置隔离。
-  - `POST /dsh-plugin-updater/api/update-batch`：body `{ "names": ["..."] }`（省略则用当前全部可更新项），顺序更新并汇总成功/失败。
+  - `POST /dsh-plugin-updater/api/update-batch`：body `{ "names": ["..."] }`（省略则用当前全部可更新项），顺序更新并汇总成功/失败；遇到需要重启或全局性失败（`stopped.reason`）时立即暂停后续项。
   - registry 优先级：`pluginManager.registries()` 的 resolved / registry / fallbackRegistries → `pluginRegistryProbe.fastest()` → `https://registry.npmjs.org/`。
 - Client 半（`client.js`）：注册 `sidebar.panellist`（`id: dsh-plugin-updater`，order 2）提供侧栏图标（有可更新插件时带提示点），并注册同名 `main` 面板（`key: dsh-plugin-updater`）承载完整检查面板；注册 `plugins.tab` 槽位（order 10）渲染同一份总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject` 渲染当前插件的更新标签与按钮，对没有可更新内容的 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存；文案走 Client locale（zh/en）；样式只使用 `--dsw-alias-*` 主题 token。
 

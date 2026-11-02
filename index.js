@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const VERSION = '0.4.1'
+const VERSION = '0.4.2'
 
 const STATE_PATH = '/dsh-plugin-updater/api/state'
 const UPDATE_PATH = '/dsh-plugin-updater/api/update'
@@ -342,6 +342,38 @@ function pendingBuildsOf(result) {
   })
 }
 
+// A profile whose pnpm lockfile lost an entry, or a pnpm resolver that produced
+// a release-policy violation, fails every remove and install the same way. Naming
+// that reason is more useful than pnpm's internal callback hint, and a batch can
+// stop instead of repeating the same failed deselect/reload for every plugin.
+const SYSTEMIC_FAILURE_CLASSES = new Set(['profile-lockfile-broken'])
+const LOCKFILE_FAILURE_MARKERS = ['ERR_PNPM_LOCKFILE_MISSING_DEPENDENCY', 'Broken lockfile']
+const RELEASE_POLICY_FAILURE_MARKERS = [
+  'ERR_PNPM_RESOLUTION_POLICY_VIOLATIONS_UNHANDLED',
+  'ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION',
+  'ERR_PNPM_NO_MATURE_MATCHING_VERSION',
+]
+
+function failureTextOf(result) {
+  if (result === null || typeof result !== 'object') return ''
+  const parts = [describeChange(result)]
+  if (result.error !== null && typeof result.error === 'object' && typeof result.error.message === 'string') {
+    parts.push(result.error.message)
+  }
+  const packageResult = result.packageResult
+  if (packageResult !== null && typeof packageResult === 'object' && typeof packageResult.output === 'string') {
+    parts.push(packageResult.output)
+  }
+  return parts.join('\n')
+}
+
+function classifyPnpmFailure(text) {
+  if (typeof text !== 'string' || text === '') return null
+  if (LOCKFILE_FAILURE_MARKERS.some((marker) => text.includes(marker))) return 'profile-lockfile-broken'
+  if (RELEASE_POLICY_FAILURE_MARKERS.some((marker) => text.includes(marker))) return 'release-policy'
+  return null
+}
+
 // ---------------------------------------------------------------------------
 // Auto-update settings (persisted next to the DSH home directory)
 // ---------------------------------------------------------------------------
@@ -489,14 +521,18 @@ export function apply(ctx) {
     for (let index = 0; index < total; index += 1) {
       const name = names[index]
       if (stopped !== null) {
+        const restart = stopped.reason === 'restart-required'
         failed.push({
           name,
-          error: 'skipped-after-restart',
-          detail: `stopped after ${stopped.name} needs a restart`,
+          error: restart ? 'skipped-after-restart' : 'skipped-after-error',
+          detail: restart
+            ? `stopped after ${stopped.name} needs a restart`
+            : `stopped after ${stopped.name} failed (${stopped.reason})`,
           rolledBack: false,
-          needsRestart: true,
+          needsRestart: restart,
           selectionMissing: false,
           refusalCode: null,
+          failureClass: restart ? null : stopped.reason,
         })
         continue
       }
@@ -523,9 +559,13 @@ export function apply(ctx) {
           needsRestart: result !== null && result.needsRestart === true,
           selectionMissing: result !== null && result.selectionMissing === true,
           refusalCode: result !== null && typeof result.refusalCode === 'string' ? result.refusalCode : null,
+          failureClass: result !== null && typeof result.failureClass === 'string' ? result.failureClass : null,
         }
         failed.push(entry)
         if (entry.needsRestart) stopped = { name, reason: 'restart-required' }
+        else if (entry.failureClass !== null && SYSTEMIC_FAILURE_CLASSES.has(entry.failureClass)) {
+          stopped = { name, reason: entry.failureClass }
+        }
       }
     }
     return { updated, failed, stopped }
@@ -894,7 +934,15 @@ export function apply(ctx) {
       removal = await manager.removeBundle(packageName)
     } catch (error) {
       const selectionMissing = selectionMissingAtStart || (await selectionOf(packageName)) === false
-      return { ok: false, error: 'remove-failed', detail: errorMessage(error), fromVersion: installedVersion, targetVersion, selectionMissing }
+      return {
+        ok: false,
+        error: 'remove-failed',
+        detail: errorMessage(error),
+        failureClass: classifyPnpmFailure(errorMessage(error)),
+        fromVersion: installedVersion,
+        targetVersion,
+        selectionMissing,
+      }
     }
     if (removal !== null && typeof removal === 'object' && (removal.application === 'failed' || removal.application === 'cancelled')) {
       const refusalCode = failureCodeOf(removal)
@@ -909,6 +957,7 @@ export function apply(ctx) {
         selectionMissing,
         selectionRestored: selectionMissing,
         detail: describeChange(removal),
+        failureClass: classifyPnpmFailure(failureTextOf(removal)),
         fromVersion: installedVersion,
         targetVersion,
       }
@@ -924,6 +973,7 @@ export function apply(ctx) {
         ok: false,
         error: 'install-failed',
         detail: errorMessage(error),
+        failureClass: classifyPnpmFailure(errorMessage(error)),
         fromVersion: installedVersion,
         targetVersion,
         rolledBack: rollback.ok,
@@ -951,6 +1001,7 @@ export function apply(ctx) {
         ok: false,
         error: 'install-failed',
         detail: describeChange(installation),
+        failureClass: classifyPnpmFailure(failureTextOf(installation)),
         ...base,
         rolledBack: rollback.ok,
         rollbackVersion: rollback.ok ? rollback.version : null,
