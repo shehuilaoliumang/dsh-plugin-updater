@@ -8,7 +8,7 @@
 
 - **侧栏 → 更新检查**（`sidebar.panellist` 图标 + 同名 `main` 面板）：日常入口。图标与插件页图标同排，有可更新插件时右上角带提示点；点开就是完整的检查面板与自动更新设置。
 - **插件 → 更新检查**（`plugins.tab`）：插件页内的总览标签页，内容与侧栏面板一致（复用同一组件），支持搜索、按状态筛选、逐条更新与批量更新。
-- **插件详情页**（`plugins.detail.badge` + `plugins.detail.actions`）：就地更新。标题旁出现「可更新 1.2.3」标签，页头出现「更新到 1.2.3」按钮，与内置插件管理器给官方插件提供 Update 的位置一致。
+- **插件详情页**（`plugins.detail.badge` + `plugins.detail.actions`）：就地更新。在 **bundle 详情页**标题旁出现「可更新 1.2.3」标签，页头出现「更新到 1.2.3」按钮；行配置页与官方插件页（没有整包可替换的对象）返回 `null`，不画多余控件。
 
 发现性问题由右下角的限时提醒补足：启动后若检测到可更新插件，会弹出一个 5 秒后自动消失、也可手动关闭的提醒卡，可直接「全部更新」或跳到插件页；同一批可更新插件在同一浏览器会话内只提醒一次。设置页不新增入口——自动更新设置就在本插件的总览与侧栏面板里。
 
@@ -18,12 +18,14 @@
 - 状态：`可更新` / `已是最新` / `本地版本更新` / `检查失败` / `已忽略`，以及本地、Git、压缩包、随 DSH 提供等跳过状态；跳过与失败会直接在行内给出原因。
 - 一键更新：点击「更新」立即执行（先卸载旧版本、再安装新版本；安装失败时自动尝试回滚），过程中轮询 Host 进度，实时显示「卸载旧版本 → 安装 x.y.z → 确认结果」与已用时长。
 - 批量更新：「全部更新（N）」会先确认一次，然后由 Host 顺序执行，结束后汇总成功/失败；失败行可单独重试。
-- 忽略此版本：按“包名 + 版本”记录在 Host 端设置文件里，忽略后不计入可更新数量，可随时取消忽略；旧版存在浏览器 `localStorage` 的忽略记录会在首次升级后自动迁移。
+- 忽略此版本：按“包名 + 版本”记录在 Host 端设置文件里，忽略后不计入可更新数量，可随时取消忽略；忽略只针对该版本——上游再发新版本时会重新出现在「可更新」里。旧版存在浏览器 `localStorage` 的忽略记录会在首次升级后自动迁移。
 - 自动更新（默认关闭，在「更新检查」页顶部设置：）
   - **打开页面时自动更新**：DSH Web UI 每次打开时检查一次，并把所有可更新插件自动更新掉，完成后用限时提醒汇总结果。
   - **定时后台更新**：DSH 运行期间按固定间隔检查并更新，间隔可设 30 分钟～30 天；开启后约 1.5 秒会先执行一次。
   - 自动更新同样只处理 npm 第三方插件，并复用“失败自动回滚”的更新流程。
-- 版本自证：页脚显示「更新检查 v0.4.2」「Host v0.4.2」与最近检查时间；浏览器端与 Host 端版本不一致时会提示重启 DSH，便于确认当前页面实际跑的是哪一版。
+- 分组可折叠：「可更新」与「其他插件」两个分组都可点标题展开/收起；有可更新项时「其他插件」默认收起，点一次即展开（首次点击有效）。
+- 侧栏角标即时刷新：检查完成、单个/批量更新结束、忽略/取消忽略之后，侧栏图标上的提示点都会随最新状态更新，不需要重开页面。
+- 版本自证：页脚始终显示「更新检查 v0.4.3」与「Host v0.4.3」两个版本号以及最近检查时间；浏览器端与 Host 端版本不一致时，Host 版本会标红并提示重启 DSH，便于确认当前页面实际跑的是哪一版。
 - 需要重启时给出提示；安装日志写入 profile 的插件管理器日志。
 - 更新被拒绝时区分原因：桌面端仍在使用某个插件（`bundle-in-use`），会提示「重启 DSH 后再更新」；如果该插件的 profile 启动项已经丢失，会显示「启动项缺失，重启后再更新即可恢复」。批量更新遇到需要重启的情况会立即暂停，不再继续尝试后续插件。
 - pnpm 层失败按原因归类：profile 的锁文件损坏（`Broken lockfile` / `ERR_PNPM_LOCKFILE_MISSING_DEPENDENCY`）、新版本等待期拦截（`ERR_PNPM_RESOLUTION_POLICY_VIOLATIONS_UNHANDLED` 等）会在错误行下给出可执行的修复提示；锁文件损坏属于全局性故障，批量更新在第一个失败处立即暂停，不再逐个插件重复失败的卸载/重载。
@@ -53,7 +55,7 @@
   - `GET|POST /dsh-plugin-updater/api/settings`：读取/合并保存自动更新设置（`autoUpdate.pageOpen`、`autoUpdate.scheduled.{enabled,intervalMinutes}` 与忽略表 `ignored`），设置写入 `~/.dsh/plugin-updater/settings.json`，与 profile 配置隔离。
   - `POST /dsh-plugin-updater/api/update-batch`：body `{ "names": ["..."] }`（省略则用当前全部可更新项），顺序更新并汇总成功/失败；遇到需要重启或全局性失败（`stopped.reason`）时立即暂停后续项。
   - registry 优先级：`pluginManager.registries()` 的 resolved / registry / fallbackRegistries → `pluginRegistryProbe.fastest()` → `https://registry.npmjs.org/`。
-- Client 半（`client.js`）：注册 `sidebar.panellist`（`id: dsh-plugin-updater`，order 2）提供侧栏图标（有可更新插件时带提示点），并注册同名 `main` 面板（`key: dsh-plugin-updater`）承载完整检查面板；注册 `plugins.tab` 槽位（order 10）渲染同一份总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject` 渲染当前插件的更新标签与按钮，对没有可更新内容的 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存；文案走 Client locale（zh/en）；样式只使用 `--dsw-alias-*` 主题 token。
+- Client 半（`client.js`）：注册 `sidebar.panellist`（`id: dsh-plugin-updater`，order 2）提供侧栏图标（有可更新插件时带提示点），并注册同名 `main` 面板（`key: dsh-plugin-updater`）承载完整检查面板；注册 `plugins.tab` 槽位（order 10）渲染同一份总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject.kind` 只对 bundle 详情页渲染更新标签与按钮，行/官方插件 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存，任何写操作完成会广播一次状态变更，侧栏角标等镜像组件据此重新读取；文案走 Client locale（zh/en，两份字典键集合一致）；样式只使用 `--dsw-alias-*` 主题 token。
 
 ## 安装
 

@@ -4,7 +4,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
 
-    const VERSION = '0.4.2'
+    const VERSION = '0.4.3'
     const NS = 'dsh-plugin-updater'
     const STATE_URL = '/dsh-plugin-updater/api/state'
     const UPDATE_URL = '/dsh-plugin-updater/api/update'
@@ -32,7 +32,6 @@ window.__ModuleLoader__.load({
       refresh: '重新检查',
       refreshing: '正在检查…',
       loading: '正在检查插件版本…',
-      loadingHint: '正在查询 npm 注册表，首次检查通常需要几秒。',
       error: '检查失败',
       retry: '重试',
       dismiss: '关闭',
@@ -42,16 +41,9 @@ window.__ModuleLoader__.load({
       countUpToDate: '{n} 个已最新',
       countSkipped: '{n} 个跳过',
       countFailed: '{n} 个失败',
-      filterAll: '全部',
-      filterUpdatable: '可更新',
-      filterUpToDate: '已最新',
-      filterSkipped: '已跳过',
-      filterFailed: '失败',
       searchPlaceholder: '搜索插件名称…',
       noMatches: '没有匹配的插件。',
       clearFilters: '清除筛选',
-      allUpToDateTitle: '全部插件均为最新版本',
-      allUpToDateBody: '检查于 {time}。有新版本发布会显示在这里，也可以随时点「重新检查」。',
       empty: '没有可检查的插件。',
       updateAll: '全部更新（{n}）',
       updateAllTitle: '批量更新 {n} 个插件',
@@ -100,7 +92,6 @@ window.__ModuleLoader__.load({
       reasonReleasePolicy: '新版本等待期',
       detailRetry: '重试',
       detailHint: '点击立即更新，失败会自动回滚',
-      progressTitle: '正在更新 {name}',
       progressChecking: '正在检查版本…',
       progressRemoving: '正在卸载旧版本…',
       progressInstalling: '正在安装 {version}…',
@@ -127,6 +118,8 @@ window.__ModuleLoader__.load({
       err_busy: '另一个更新正在进行',
       err_invalid_name: '插件名无效',
       err_invalid_body: '请求内容无效',
+      err_settings_unavailable: '设置无法保存（DSH 用户目录不可写）',
+      err_disabled: '自动更新未启用',
       err_untrusted_origin: '请求来源不可信',
       err_restart_required: '当前进程仍在使用这些插件，无法卸载；请重启 DSH 后再更新',
       err_skipped_after_restart: '前面的插件需要重启，已暂停后续更新',
@@ -139,18 +132,7 @@ window.__ModuleLoader__.load({
       checkedJustNow: '刚刚检查',
       checkedMinutesAgo: '{n} 分钟前检查',
       checkedAtTime: '检查于 {time}',
-      registry: '注册表 {registry}',
-      skipHint: '本地、Git、压缩包与随 DSH 提供的插件不在此更新。',
       openDetail: '插件详情',
-      toastTitle: '有 {n} 个插件可更新',
-      toastBody: '打开插件页的「更新检查」即可一键更新。',
-      toastView: '查看',
-      toastDismiss: '稍后',
-      colName: '插件',
-      colCurrent: '当前版本',
-      colLatest: '最新版本',
-      colStatus: '状态',
-      colAction: '操作',
       navLabel: '更新检查',
       viewGrid: '卡片视图',
       viewList: '列表视图',
@@ -176,7 +158,6 @@ window.__ModuleLoader__.load({
       settingsLastRunNone: '尚未执行过自动更新。',
       settingsIgnored: '已忽略 {n} 个版本',
       settingsInvalidInterval: '间隔需在 30 分钟 ～ 30 天之间。',
-      autoRunWaiting: '自动更新中…',
       popupTitle: '有 {n} 个插件可更新',
       popupBody: '可以立即全部更新，或前往插件页逐个查看。',
       popupUpdateAll: '全部更新（{n}）',
@@ -184,7 +165,6 @@ window.__ModuleLoader__.load({
       popupClose: '关闭',
       popupSeconds: '{n} 秒后自动关闭',
       popupWorking: '正在更新（{done}/{total}）…',
-      popupDone: '已更新 {n} 个插件',
       popupPartial: '已更新 {ok} 个，失败 {failed} 个',
       popupUpdated: '已自动更新 {n} 个插件',
     }
@@ -204,7 +184,6 @@ window.__ModuleLoader__.load({
       refresh: 'Check again',
       refreshing: 'Checking…',
       loading: 'Checking plugin versions…',
-      loadingHint: 'Querying the npm registry; the first check usually takes a few seconds.',
       error: 'Check failed',
       retry: 'Retry',
       dismiss: 'Dismiss',
@@ -214,16 +193,9 @@ window.__ModuleLoader__.load({
       countUpToDate: '{n} up to date',
       countSkipped: '{n} skipped',
       countFailed: '{n} failed',
-      filterAll: 'All',
-      filterUpdatable: 'Updatable',
-      filterUpToDate: 'Up to date',
-      filterSkipped: 'Skipped',
-      filterFailed: 'Failed',
       searchPlaceholder: 'Search plugins…',
       noMatches: 'No matching plugins.',
       clearFilters: 'Clear filters',
-      allUpToDateTitle: 'Everything is up to date',
-      allUpToDateBody: 'Checked {time}. New releases will show up here; you can check again anytime.',
       empty: 'No plugins to check.',
       updateAll: 'Update all ({n})',
       updateAllTitle: 'Update {n} plugins',
@@ -272,7 +244,6 @@ window.__ModuleLoader__.load({
       reasonReleasePolicy: 'release age wait',
       detailRetry: 'Retry',
       detailHint: 'Click to update now; restores the old version if it fails',
-      progressTitle: 'Updating {name}',
       progressChecking: 'Checking version…',
       progressRemoving: 'Removing the old version…',
       progressInstalling: 'Installing {version}…',
@@ -299,6 +270,8 @@ window.__ModuleLoader__.load({
       err_busy: 'Another update is already running',
       err_invalid_name: 'Invalid plugin name',
       err_invalid_body: 'Invalid request body',
+      err_settings_unavailable: 'Settings cannot be saved (the DSH user directory is not writable)',
+      err_disabled: 'Automatic updates are not enabled',
       err_untrusted_origin: 'Untrusted request origin',
       err_restart_required: 'These plugins are still loaded by this process, so they cannot be removed; restart DSH and retry',
       err_skipped_after_restart: 'Paused after an earlier plugin required a restart',
@@ -311,18 +284,7 @@ window.__ModuleLoader__.load({
       checkedJustNow: 'Checked just now',
       checkedMinutesAgo: 'Checked {n} min ago',
       checkedAtTime: 'Checked {time}',
-      registry: 'Registry {registry}',
-      skipHint: 'Local, Git, tarball and DSH-shipped plugins are not updated here.',
       openDetail: 'Plugin page',
-      toastTitle: '{n} plugin updates available',
-      toastBody: 'Open the “Update check” tab in the Plugins page to update them.',
-      toastView: 'View',
-      toastDismiss: 'Later',
-      colName: 'Plugin',
-      colCurrent: 'Current',
-      colLatest: 'Latest',
-      colStatus: 'Status',
-      colAction: 'Action',
       navLabel: 'Update check',
       viewGrid: 'Card view',
       viewList: 'List view',
@@ -348,7 +310,6 @@ window.__ModuleLoader__.load({
       settingsLastRunNone: 'No automatic run yet.',
       settingsIgnored: '{n} versions ignored',
       settingsInvalidInterval: 'The interval must be between 30 minutes and 30 days.',
-      autoRunWaiting: 'Running automatic update…',
       popupTitle: '{n} plugin updates available',
       popupBody: 'Update all of them now, or open the Plugins page to review each one.',
       popupUpdateAll: 'Update all ({n})',
@@ -356,7 +317,6 @@ window.__ModuleLoader__.load({
       popupClose: 'Close',
       popupSeconds: 'Closes in {n}s',
       popupWorking: 'Updating ({done}/{total})…',
-      popupDone: 'Updated {n} plugins',
       popupPartial: 'Updated {ok}, failed {failed}',
       popupUpdated: 'Updated {n} plugins automatically',
     }
@@ -505,6 +465,7 @@ window.__ModuleLoader__.load({
 .dpu-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 16px; }
 .dpu-foot > span { display: inline-flex; align-items: center; }
 .dpu-foot > span + span::before { content: '·'; margin: 0 8px; opacity: 0.55; }
+.dpu-foot-warn { color: var(--dsw-alias-state-error-primary); }
 .dpu-progress { display: flex; align-items: center; gap: 10px; color: var(--dsw-alias-label-primary); font-size: 12px; }
 .dpu-progress-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .dpu-progress-phase { font-weight: 500; }
@@ -708,10 +669,32 @@ window.__ModuleLoader__.load({
 
     const stateCache = { value: null, promise: null }
     const recentUpdates = new Map()
+    const stateListeners = new Set()
+
+    // Any component that mirrors Host state (the sidebar badge, for one) listens
+    // here: invalidateState() is called whenever a mutation finished, so it can
+    // re-read without polling.
+    function notifyStateChanged() {
+      for (const listener of stateListeners) {
+        try {
+          listener()
+        } catch {
+          // One broken listener must not stop the others.
+        }
+      }
+    }
+
+    function subscribeState(listener) {
+      stateListeners.add(listener)
+      return () => {
+        stateListeners.delete(listener)
+      }
+    }
 
     function invalidateState() {
       stateCache.value = null
       stateCache.promise = null
+      notifyStateChanged()
     }
 
     function loadState(force) {
@@ -816,8 +799,13 @@ window.__ModuleLoader__.load({
       return plugins.find((entry) => entry !== null && typeof entry === 'object' && entry.name === name) || null
     }
 
+    // The detail slots receive one of three subjects: an official item (id only),
+    // a row's configuration page (pkg + row), or a bundle page (pkg + its rows).
+    // Only a bundle page is the place to offer replacing the whole package, so a
+    // row or item subject renders nothing here.
     function subjectPackage(subject) {
       if (subject === null || typeof subject !== 'object') return null
+      if (subject.kind === 'item' || subject.kind === 'row') return null
       const pkg = subject.pkg
       if (pkg === null || typeof pkg !== 'object') return null
       if (typeof pkg.name !== 'string' || pkg.name === '') return null
@@ -1186,7 +1174,9 @@ window.__ModuleLoader__.load({
         if (row === null || typeof row !== 'object') continue
         if (row.status !== 'update-available') continue
         if (typeof row.name !== 'string' || row.name === '') continue
-        if (ignoredVersionOf(row.name) !== null) continue
+        // Ignoring is per version: a newer release than the ignored one is
+        // updatable again, so only skip while the record matches this latest.
+        if (typeof row.latestVersion === 'string' && ignoredVersionOf(row.name) === row.latestVersion) continue
         names.push(row.name)
       }
       return names
@@ -1443,14 +1433,18 @@ window.__ModuleLoader__.load({
 
         React.useEffect(() => {
           let alive = true
-          loadState(false)
-            .then((state) => {
-              if (!alive) return
-              setCount(updatableNamesOf(state).length)
-            })
-            .catch(() => {})
+          const refresh = () => {
+            loadState(false)
+              .then((state) => {
+                if (alive) setCount(updatableNamesOf(state).length)
+              })
+              .catch(() => {})
+          }
+          refresh()
+          const unsubscribe = subscribeState(refresh)
           return () => {
             alive = false
+            unsubscribe()
           }
         }, [])
 
@@ -1577,10 +1571,12 @@ window.__ModuleLoader__.load({
           }
         }, [])
 
-        const toggleSection = React.useCallback((key) => {
+        const toggleSection = React.useCallback((key, collapsedNow) => {
           setCollapsed((previous) => {
+            // The first render has no explicit entry for a section, so the
+            // effective state passed in is the one to invert — not `undefined`.
             const next = { ...previous }
-            next[key] = !next[key]
+            next[key] = !collapsedNow
             return next
           })
         }, [])
@@ -1811,7 +1807,8 @@ window.__ModuleLoader__.load({
             })
             .catch((error) => {
               if (!alive.current) return
-              const detail = error !== null && typeof error.message === 'string' ? error.message : t('updateNoDetail')
+              const message = error !== null && typeof error.message === 'string' ? error.message : ''
+              const detail = errorTextOf(t, { error: message })
               setSettingsNotice({ kind: 'error', text: format(t('settingsSaveFailed'), { detail }) })
             })
             .finally(() => {
@@ -2195,7 +2192,7 @@ window.__ModuleLoader__.load({
                   type: 'button',
                   className: 'dpu-section-head dpu-section-toggle',
                   'aria-expanded': isCollapsed ? 'false' : 'true',
-                  onClick: () => toggleSection(key),
+                  onClick: () => toggleSection(key, isCollapsed),
                 }, [
                   h('span', { key: 'chevron', className: `dpu-section-chevron${isCollapsed ? '' : ' dpu-section-chevron-open'}` }, glyph('chevron', 12)),
                   h('span', { key: 'label' }, label),
@@ -2319,7 +2316,9 @@ window.__ModuleLoader__.load({
               title: typeof data.registry === 'string' && data.registry !== '' ? data.registry : undefined,
             }, format(t('versionFooter'), { client: VERSION })),
           ]
-          if (versionMismatch && hostVersion !== null) footer.push(h('span', { key: 'host' }, format(t('hostVersionFooter'), { host: hostVersion })))
+          if (hostVersion !== null) {
+            footer.push(h('span', { key: 'host', className: versionMismatch ? 'dpu-foot-warn' : undefined }, format(t('hostVersionFooter'), { host: hostVersion })))
+          }
           if (typeof data.checkedAt === 'string') footer.push(h('span', { key: 'checked' }, formatCheckedAt(t, data.checkedAt)))
           rows.push(h('div', { key: 'foot', className: 'dpu-foot' }, footer))
         }

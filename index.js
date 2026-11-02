@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const VERSION = '0.4.2'
+const VERSION = '0.4.3'
 
 const STATE_PATH = '/dsh-plugin-updater/api/state'
 const UPDATE_PATH = '/dsh-plugin-updater/api/update'
@@ -1022,7 +1022,7 @@ export function apply(ctx) {
 
   async function handleState(request, response) {
     if (!isSameOrigin(request)) {
-      sendJson(response, 403, { ok: false, error: 'untrusted origin' })
+      sendJson(response, 403, { ok: false, error: 'untrusted-origin' })
       return
     }
     if (request.method !== 'GET') {
