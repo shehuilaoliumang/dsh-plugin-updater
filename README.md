@@ -25,7 +25,7 @@
   - 自动更新同样只处理 npm 第三方插件，并复用“失败自动回滚”的更新流程。
 - 分组可折叠：「可更新」与「其他插件」两个分组都可点标题展开/收起；有可更新项时「其他插件」默认收起，点一次即展开（首次点击有效）。
 - 侧栏角标即时刷新：检查完成、单个/批量更新结束、忽略/取消忽略之后，侧栏图标上的提示点都会随最新状态更新，不需要重开页面。
-- 版本自证：页脚始终显示「更新检查 v0.4.3」与「Host v0.4.3」两个版本号以及最近检查时间；浏览器端与 Host 端版本不一致时，Host 版本会标红并提示重启 DSH，便于确认当前页面实际跑的是哪一版。
+- 版本自证：页脚始终显示「更新检查 v0.4.4」与「Host v0.4.4」两个版本号以及最近检查时间；浏览器端与 Host 端版本不一致时，Host 版本会标红并提示重启 DSH，便于确认当前页面实际跑的是哪一版。
 - 需要重启时给出提示；安装日志写入 profile 的插件管理器日志。
 - 更新被拒绝时区分原因：桌面端仍在使用某个插件（`bundle-in-use`），会提示「重启 DSH 后再更新」；如果该插件的 profile 启动项已经丢失，会显示「启动项缺失，重启后再更新即可恢复」。批量更新遇到需要重启的情况会立即暂停，不再继续尝试后续插件。
 - pnpm 层失败按原因归类：profile 的锁文件损坏（`Broken lockfile` / `ERR_PNPM_LOCKFILE_MISSING_DEPENDENCY`）、新版本等待期拦截（`ERR_PNPM_RESOLUTION_POLICY_VIOLATIONS_UNHANDLED` 等）会在错误行下给出可执行的修复提示；锁文件损坏属于全局性故障，批量更新在第一个失败处立即暂停，不再逐个插件重复失败的卸载/重载。
@@ -55,7 +55,7 @@
   - `GET|POST /dsh-plugin-updater/api/settings`：读取/合并保存自动更新设置（`autoUpdate.pageOpen`、`autoUpdate.scheduled.{enabled,intervalMinutes}` 与忽略表 `ignored`），设置写入 `~/.dsh/plugin-updater/settings.json`，与 profile 配置隔离。
   - `POST /dsh-plugin-updater/api/update-batch`：body `{ "names": ["..."] }`（省略则用当前全部可更新项），顺序更新并汇总成功/失败；遇到需要重启或全局性失败（`stopped.reason`）时立即暂停后续项。
   - registry 优先级：`pluginManager.registries()` 的 resolved / registry / fallbackRegistries → `pluginRegistryProbe.fastest()` → `https://registry.npmjs.org/`。
-- Client 半（`client.js`）：注册 `sidebar.panellist`（`id: dsh-plugin-updater`，order 2）提供侧栏图标（有可更新插件时带提示点），并注册同名 `main` 面板（`key: dsh-plugin-updater`）承载完整检查面板；注册 `plugins.tab` 槽位（order 10）渲染同一份总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject.kind` 只对 bundle 详情页渲染更新标签与按钮，行/官方插件 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存，任何写操作完成会广播一次状态变更，侧栏角标等镜像组件据此重新读取；文案走 Client locale（zh/en，两份字典键集合一致）；样式只使用 `--dsw-alias-*` 主题 token。
+- Client 半（`client.js`）：注册 `sidebar.panellist`（`id: dsh-plugin-updater`，order 2）提供侧栏图标（有可更新插件时带提示点），并注册同名 `main` 面板（`key: dsh-plugin-updater`）承载完整检查面板；注册 `plugins.tab` 槽位（order 10）渲染同一份总览与自动更新设置卡；注册 `plugins.detail.badge`（order 5）与 `plugins.detail.actions`（order 10）两个详情页槽位，按 `subject.kind` 只对 bundle 详情页渲染更新标签与按钮，行/官方插件 subject 返回 `null`；注册 `shell.overlay` 槽位渲染右下角 5 秒限时提醒（倒计时进度条、可关闭、可直接全部更新）。启动时会把旧 `localStorage` 忽略记录迁移到 Host，并按设置决定自动更新还是弹提醒。各组件共享同一份 Host 状态缓存，任何写操作完成会广播一次状态变更，侧栏角标等镜像组件据此重新读取；文案走 Client locale（zh/en，两份字典键集合一致）；样式只使用 `--dsw-alias-*` 主题 token。样式表在 `apply()` 里一次性注入 `document.head`（单例 id 守卫，卸载时移除），不挂靠在某个槽位内——因此插件页未打开时，右下角提醒卡、侧栏图标、详情页徽标与按钮仍有完整样式。
 
 ## 安装
 

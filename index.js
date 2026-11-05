@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const VERSION = '0.4.3'
+const VERSION = '0.4.4'
 
 const STATE_PATH = '/dsh-plugin-updater/api/state'
 const UPDATE_PATH = '/dsh-plugin-updater/api/update'

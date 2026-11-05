@@ -4,7 +4,7 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
 
-    const VERSION = '0.4.3'
+    const VERSION = '0.4.4'
     const NS = 'dsh-plugin-updater'
     const STATE_URL = '/dsh-plugin-updater/api/state'
     const UPDATE_URL = '/dsh-plugin-updater/api/update'
@@ -166,6 +166,7 @@ window.__ModuleLoader__.load({
       popupSeconds: '{n} 秒后自动关闭',
       popupWorking: '正在更新（{done}/{total}）…',
       popupPartial: '已更新 {ok} 个，失败 {failed} 个',
+      popupFailedHint: '打开「更新检查」查看失败原因。',
       popupUpdated: '已自动更新 {n} 个插件',
     }
 
@@ -318,6 +319,7 @@ window.__ModuleLoader__.load({
       popupSeconds: 'Closes in {n}s',
       popupWorking: 'Updating ({done}/{total})…',
       popupPartial: 'Updated {ok}, failed {failed}',
+      popupFailedHint: 'Open Update check to see why.',
       popupUpdated: 'Updated {n} plugins automatically',
     }
 
@@ -498,7 +500,7 @@ window.__ModuleLoader__.load({
 .dpu-settings-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--dsw-alias-border-l1) 62%, transparent); }
 .dpu-settings-notice { color: var(--dsw-alias-state-success-primary); font-size: 11px; }
 .dpu-settings-error { color: var(--dsw-alias-state-error-primary); font-size: 11px; }
-.dpu-popup { position: fixed; right: 20px; bottom: 20px; z-index: 9999; width: 364px; max-width: calc(100vw - 32px); border-radius: 10px; overflow: hidden; background: linear-gradient(158deg, color-mix(in srgb, var(--dsw-alias-bg-overlay) 94%, transparent), color-mix(in srgb, var(--dsw-alias-bg-layer-2) 82%, transparent)); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34), 0 2px 10px rgba(0, 0, 0, 0.12), inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-border-l2) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.18); backdrop-filter: blur(20px) saturate(1.25); color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px; animation: dpu-rise 220ms var(--dpu-ease); }
+.dpu-popup { position: fixed; right: 20px; bottom: 20px; z-index: 9999; width: 364px; max-width: calc(100vw - 32px); box-sizing: border-box; border-radius: 10px; overflow: hidden; background: linear-gradient(158deg, color-mix(in srgb, var(--dsw-alias-bg-overlay) 94%, transparent), color-mix(in srgb, var(--dsw-alias-bg-layer-2) 82%, transparent)); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34), 0 2px 10px rgba(0, 0, 0, 0.12), inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-border-l2) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.18); backdrop-filter: blur(20px) saturate(1.25); color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px; --dpu-ease: cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: auto; animation: dpu-rise 220ms var(--dpu-ease); }
 .dpu-popup-main { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 10px 14px; }
 .dpu-popup-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 26px; height: 26px; margin-top: 1px; border-radius: 8px; background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 20%, transparent); color: var(--dsw-alias-state-warn-primary); }
 .dpu-popup-icon-ok { background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent); color: var(--dsw-alias-state-success-primary); }
@@ -535,6 +537,27 @@ window.__ModuleLoader__.load({
   .dpu-root, .dpu-root *, .dpu-popup, .dpu-popup * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
 `
+
+    // The stylesheet is injected once into <head>, not into a single slot. The
+    // reminder popup lives in shell.overlay and the sidebar entry, detail badge
+    // and main panel render outside the plugins tab, so a <style> rendered by
+    // the tab would leave all of them unstyled whenever the tab is not mounted.
+    const CSS_ID = 'dsh-plugin-updater-css'
+
+    function installCss() {
+      if (typeof document === 'undefined') return
+      if (document.getElementById(CSS_ID) !== null) return
+      const style = document.createElement('style')
+      style.id = CSS_ID
+      style.textContent = CSS
+      document.head.appendChild(style)
+    }
+
+    function removeCss() {
+      if (typeof document === 'undefined') return
+      const style = document.getElementById(CSS_ID)
+      if (style !== null && style.parentNode !== null) style.parentNode.removeChild(style)
+    }
 
     // ---------------------------------------------------------------------
     // Small helpers
@@ -1345,6 +1368,9 @@ window.__ModuleLoader__.load({
 
         const isDone = state.phase === 'done'
         const isOk = isDone && state.failed === 0
+        const bodyText = isDone
+          ? (state.failed > 0 ? t('popupFailedHint') : '')
+          : (state.phase === 'idle' ? t('popupBody') : '')
         const iconNode = state.phase === 'working'
           ? h('span', { key: 'spinner', className: 'dpu-spinner' })
           : glyph(isDone ? (isOk ? 'check' : 'alert') : 'sync', 15)
@@ -1400,7 +1426,7 @@ window.__ModuleLoader__.load({
             h('span', { key: 'icon', className: `dpu-popup-icon${isOk ? ' dpu-popup-icon-ok' : ''}` }, iconNode),
             h('div', { key: 'content', className: 'dpu-popup-content' }, [
               h('div', { key: 'title', className: 'dpu-popup-title' }, title),
-              state.phase === 'idle' ? h('div', { key: 'body', className: 'dpu-popup-body' }, t('popupBody')) : null,
+              bodyText === '' ? null : h('div', { key: 'body', className: 'dpu-popup-body' }, bodyText),
               actions.length === 0 ? null : h('div', { key: 'actions', className: 'dpu-popup-actions' }, actions),
             ].filter(Boolean)),
             h('button', {
@@ -2324,7 +2350,6 @@ window.__ModuleLoader__.load({
         }
 
         return h('div', { className: 'dpu-root' }, [
-          h('style', { key: 'css' }, CSS),
           h('div', { key: 'head', className: 'dpu-head' }, [
             h('div', { key: 'main', className: 'dpu-head-main' }, [
               h('span', { key: 'mark', className: 'dpu-mark' }, glyph('sync', 20)),
@@ -2365,6 +2390,13 @@ window.__ModuleLoader__.load({
       runtimeContext = ctx
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-plugin-updater: dictionaries')
       const t = ctx.locale.bind(NS)
+
+      ctx.effect(() => {
+        installCss()
+        return () => {
+          removeCss()
+        }
+      }, 'dsh-plugin-updater: styles')
 
       ctx.slots.inject('plugins.tab', () => ctx.slots.register({
         name: 'plugins.tab',
